@@ -1,4 +1,5 @@
-from frontendcli.loop import *
+from frontendcli import loop
 
 print("hi!")
-enter()
+loop.initialize()
+loop.enter()

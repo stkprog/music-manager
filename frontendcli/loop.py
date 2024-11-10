@@ -1,6 +1,10 @@
-from backend.discogs import *
-from backend.files import *
+from backend import discogs
+from backend import files
+
+def initialize():
+    token = open("token.txt", "r").read()
+    discogs.create_discogs_client(token)
 
 def enter():
-    print("entered loop")
-    search(input())
+    discogs.search(input())
+    # files.ensure_files_exist()
