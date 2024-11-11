@@ -12,10 +12,9 @@
 * load in program as array?
 ```
 [
-    235345,
-    124543,
-    765876,
-    // ...
+    3612706,
+    3643167,
+    3252004
 ]
 ```
 ### listened to albums
@@ -25,11 +24,20 @@
 ```
 [
     {
-        "id": 235345,
+        "release_id": 3612706,
         "rating": 6,
-        "thoughts": "lorem ipsum dolor..."
+        "thoughts": "lorem ipsum"
     },
-    // ...
+    {
+        "release_id": 3643167,
+        "rating": 3,
+        "thoughts": "ipsum lorem"
+    },
+    {
+        "release_id": 3252004,
+        "rating": 6,
+        "thoughts": "lorem ipsum"
+    }
 ]
 ```
 * either that, or take info from discogs and save it all locally:
