@@ -47,6 +47,9 @@
 ]
 ```
 * not sure yet which option would be the better one
+* realistically probably the first one. i'm using the discogs api for a reason
+* should probably check if the api has access limits
+* if not, experiment with caching
 
 ## ui / album management
 * the differents sections should act as different screens that get "switched out", similar to the notebook widget in gtk. think tabs
