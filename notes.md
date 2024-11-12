@@ -1,8 +1,27 @@
 # keeping track of things
 
 ## curses
-* todo
-* look up example programs and finished applications made with python curses
+### terminal resizing
+* minimal example:
+    - when resizing the terminal window with the mouse, the key from ``getkey()`` is called **KEY_RESIZE**
+    - this also works with XFCE4's resizing shortcut (_Alt+F8_)
+    - ``curses.update_lines_cols()`` updates the numbers
+    - current values can be accessed using ``stdscr.getmaxyx()``
+```
+def main(stdscr : window):
+    while(True):
+        y, x = stdscr.getmaxyx()
+        key = stdscr.getkey()
+
+        update_lines_cols()
+
+        stdscr.clear()
+        stdscr.addstr(0, 1, "height: " + str(y), A_NORMAL)
+        stdscr.addstr(1, 1, "width: " + str(x), A_NORMAL)
+        stdscr.addstr(2, 1, key)
+        stdscr.refresh()
+wrapper(main)
+```
 
 ## local file management
 * save both of the following on any change, for safety?
