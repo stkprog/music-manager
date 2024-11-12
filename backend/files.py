@@ -61,6 +61,7 @@ class FileWriter:
         for a in self.album_list:
             if a.release_id == new_entry.release_id:
                 exists = True
+                break
         if not exists:
             self.album_list.append(new_entry)
             albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
@@ -74,6 +75,7 @@ class FileWriter:
                 a.thoughts = edited_entry.thoughts
                 albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
                 self.write_to_disk(ALBUM_PATH, albums_list_serialized)
+                break
 
     def remove_from_album_list(self, release_id : int) -> None:
         """Remove a release from the album list if it can be found."""
@@ -83,6 +85,7 @@ class FileWriter:
             if self.album_list[i].release_id == release_id:
                 index_to_be_removed = i
                 index_found = True
+                break
         if index_found:
             self.album_list.pop(index_to_be_removed)
             albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
