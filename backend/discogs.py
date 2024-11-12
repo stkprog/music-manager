@@ -19,7 +19,16 @@ class DiscogsHelper:
         for r in results:                       # r = Master
             main_r : Release = r.main_release   # main_r = Release
             artists = self.artists_array_to_comma_separated_string(main_r.artists)
-            print(f"{main_r.id}: {artists} - {main_r.title} {main_r.genres}", sep=",")
+            # In rare cases, year might be unknown for whatever reason,
+            # or differ between releases.
+            # If it can't be found, add string "Unknown"
+            year : int | str = 0
+            if main_r.year == 0 and r.year == 0:
+                year = "Unknown"
+            elif main_r.year > 0 or (main_r.year == 0 and r.year > 0):
+                year = r.year
+
+            print(f"{main_r.id}: {artists} - {main_r.title} [{main_r.genres}], ({year})", sep=",")
 
     def get_release(self, release_id : int) -> Release:
         """Return the main release of the given master album."""
