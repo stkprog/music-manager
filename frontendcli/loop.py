@@ -3,9 +3,11 @@ from backend.files import FileWriter
 from backend.models import Listened
 
 def get_token() -> str:
+    """Reads and returns the Discogs API personal access token from the specified file."""
     return open("token.txt", "r").read()
 
 def enter() -> None:
+    """Entrypoint for the main loop of the program."""
     file_writer = FileWriter()
 
     discogs_helper = DiscogsHelper(get_token())
