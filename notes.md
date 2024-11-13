@@ -7,12 +7,11 @@
     - this also works with XFCE4's resizing shortcut (_Alt+F8_)
     - ``curses.update_lines_cols()`` updates the numbers
     - current values can be accessed using ``stdscr.getmaxyx()``
+    - program doesn't terminate when resizing (!!!)
 ```
 def main(stdscr : window):
     while(True):
         y, x = stdscr.getmaxyx()
-        key = stdscr.getkey()
-
         update_lines_cols()
 
         stdscr.clear()
@@ -20,6 +19,7 @@ def main(stdscr : window):
         stdscr.addstr(1, 1, "width: " + str(x), A_NORMAL)
         stdscr.addstr(2, 1, key)
         stdscr.refresh()
+        key = stdscr.getkey()
 wrapper(main)
 ```
 ### header lines
