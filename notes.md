@@ -78,6 +78,10 @@ def initialize_footer(stdscr : window, color : int):
     stdscr.insch(" ", color)
 ```
 
+### pads
+* fixed window that is seen, content inside "moves"
+* test strings always seemed to be cut off by atleast one character on the left side
+
 ## local file management
 * save both of the following on any change, for safety?
 ### bucketlist albums
@@ -147,3 +151,4 @@ def initialize_footer(stdscr : window, color : int):
 * [textbox selection example](https://incolumitas.com/2013/06/02/python-and-curses-a-small-textbox-selection-example/)
 * [scrolling menu example](https://stackoverflow.com/questions/30828804/how-to-make-a-scrolling-menu-in-python-curses)
 * [Curses Programming with Python by A.M. Kuchling](https://sceweb.sce.uhcl.edu/helm/WEBPAGE-Python/documentation/howto/curses/curses.html)
+* [Ncurses: Pads](https://de.wikibooks.org/wiki/Ncurses:_Pads)
