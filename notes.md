@@ -152,3 +152,5 @@ def initialize_footer(stdscr : window, color : int):
 * [scrolling menu example](https://stackoverflow.com/questions/30828804/how-to-make-a-scrolling-menu-in-python-curses)
 * [Curses Programming with Python by A.M. Kuchling](https://sceweb.sce.uhcl.edu/helm/WEBPAGE-Python/documentation/howto/curses/curses.html)
 * [Ncurses: Pads](https://de.wikibooks.org/wiki/Ncurses:_Pads)
+* [python-curses-scroll-example](https://github.com/mingrammer/python-curses-scroll-example/tree/master)
+* [python_curses_examples](https://github.com/itssme/python_curses_examples)
