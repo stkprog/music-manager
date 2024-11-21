@@ -44,6 +44,7 @@ def enter(stdscr : window) -> None:
 
     key = ""
     user_input = ""
+    results = []
     while True:
         # stdscr.addstr(0, 0, "str")
         if key == "q" or key == "Q":
@@ -53,17 +54,29 @@ def enter(stdscr : window) -> None:
         elif key == "2":
             content_win.bkgd(" ", RED)
         elif key == "t" or key == "T":
+            input_box.do_command(KEY_BACKSPACE)
             input_box.edit()
-            user_input = input_box.gather().strip()
+            user_input = input_box.gather().strip().replace("_", " ")
+            input_win.clear()
+            input_win.refresh()
         
+        if user_input != "":
+            content_win.addstr(3, 0, "Searching...", BLUE)
+            content_win.refresh()
+            results = discogs_helper.search(user_input)
+
         # header_win.bkgd(" ", WHITE)
         stdscr.refresh()
         header_win.refresh()
         content_win.clear()
-        content_win.addstr(1, 0, user_input)
+        content_win.addstr(1, 0, user_input, DEFAULT | A_REVERSE)
+        content_win.addstr(2, 0, key, DEFAULT | A_REVERSE)
+        if user_input != "":
+            user_input = ""
+            content_win.clear()
+            for i in range(len(results)):
+                content_win.addstr(4 + i, 0, f"{results[i].artists} - {results[i].title}", BLUE)
         content_win.refresh()
-        # input_win.clear()
-        input_win.refresh()
         key = stdscr.getkey()
 
     ### TESTING

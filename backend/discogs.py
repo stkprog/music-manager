@@ -8,7 +8,7 @@ class DiscogsHelper:
     def __init__(self, token) -> None:
         self.d : Client = Client("MusicManager/0.1", user_token=token)
 
-    def search(self, user_query : str) -> MixedPaginatedList:
+    def search(self, user_query : str) -> list[ProcessedRelease]:
         """Search for the main release of albums using the text provided by the user."""
         results : MixedPaginatedList = self.d.search(user_query, type="master").page(1)[0:10]
         artists : str = ""
