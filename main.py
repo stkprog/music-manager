@@ -1,4 +1,4 @@
 from frontendcli import loop
+from curses import wrapper
 
-print("hi!")
-loop.enter()
+wrapper(loop.enter)
