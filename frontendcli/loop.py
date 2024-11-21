@@ -1,6 +1,8 @@
 from backend.discogs import DiscogsHelper
 from backend.files import FileWriter
 from backend.models import Listened
+from backend.models import ProcessedRelease
+import time
 
 def get_token() -> str:
     """Reads and returns the Discogs API personal access token from the specified file."""
@@ -11,8 +13,12 @@ def enter() -> None:
     file_writer = FileWriter()
 
     discogs_helper = DiscogsHelper(get_token())
+
     # master_release = discogs_helper.get_release(3643167)
-    discogs_helper.search(input())
+    
+    # test : list[ProcessedRelease] = discogs_helper.search(input())
+    # for x in test:
+    #     print(x)
 
     # file_writer.ensure_files_exist()
     # file_writer.read_album_list()

@@ -146,6 +146,10 @@ def initialize_footer(stdscr : window, color : int):
 * ability to change rating and thoughts for listened to albums
 * ability to sort albums in both lists by the different columns
 
+## discogs API
+* some artists share the same names, so they are made identifiable by adding the number at the end e.g. (2)
+* to remove this using string cutting: ``artist_name[:-4]``
+
 ## things to note / useful links
 * initializing locales so characters of all languages(?) work: [here](https://stackoverflow.com/questions/42510606/python-curses-textpad-textbox-keyboard-input-not-working-with-german-umlauts)
 * [textbox selection example](https://incolumitas.com/2013/06/02/python-and-curses-a-small-textbox-selection-example/)
