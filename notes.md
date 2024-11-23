@@ -137,6 +137,50 @@ def initialize_footer(stdscr : window, color : int):
 * should probably check if the api has access limits
 * if not, experiment with caching
 
+## asciimatics
+* considering changing to this libary, because it's higher level than curses
+
+### themes
+* default theme dictionary can be imported using
+```
+from asciimatics.widgets.utilities import THEMES
+```
+* i'm not sure if this is the case for every tty, but on mine, "BOLD" text is shown lighter as "NORMAL" text
+### example scene structure
+* scene
+    - frame
+        * layout
+        * layout
+    - frame
+        * layout
+* <u>LAYOUTS:</u>
+    - hold widgets in a specified amount of columns
+    - columns can be the same width (1, 1) or different widths (2, 1)
+* <u>FRAMES:</u>
+    - hold layouts
+    - can be scrollable or not
+* <u>SCENES:</u>
+    - hold frames
+    - can be switched to using the ``NextScene`` exception and an identifier
+
+### event handling
+* this includes keyboard presses and mouse clicks
+* only certain things are already handled by widgets
+* everything else is unhandled
+* for such events, define a function at the top as such
+```
+def global_shortcuts(event):
+    if isinstance(event, KeyboardEvent):
+        c = chr(event.key_code)
+        if c == "q" or c == "Q":
+            raise StopApplication("User terminated app")
+```
+* and then make sure this function is called for unhandled inputs
+```
+screen.play(..., unhandled_input=global_shortcuts, ...)
+```
+* function keys etc. can be accessed using ``Screen.KEY_F1``. These are all integer numbers
+
 ## ui / album management
 * the differents sections should act as different screens that get "switched out", similar to the notebook widget in gtk. think tabs
 * tab name includes the corresponding buttons to load the tab, ideally something simple like f1 ... f10
