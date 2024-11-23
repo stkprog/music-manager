@@ -1,6 +1,7 @@
 from discogs_client import Client
 from discogs_client.models import Release, MixedPaginatedList
 from backend.models import ProcessedRelease
+import re
 
 class DiscogsHelper:
     """Utility class for interaction with the Discogs API."""
@@ -15,22 +16,33 @@ class DiscogsHelper:
         processed_results : list[ProcessedRelease] = []
 
         # Searching for "master releases" instead of "releases"
-        # and then getting the main release for this album.
-        # For the sake of this program, multiple releases of the same album
+        # and then the main release. multiple releases of the same album
         # e.g. in different formats (LP, CD, ...) don't need to be shown to the user.
         for r in results:                       # r = Master
             main_r : Release = r.main_release   # main_r = Release
-            artists = self.array_to_comma_separated_string(
-                list(map(lambda x : x.name, main_r.artists))
-            )
+            artists = []
+            for a in main_r.artists:
+                artists.append(self.process_artist(a.name))
+            artists = self.array_to_comma_separated_string(artists)
             genres = self.array_to_comma_separated_string(main_r.genres)
-
             year : int | str = self.process_year(r, main_r)
 
             processed_results.append(ProcessedRelease(
                 main_r.id, artists, main_r.title, genres, year
             ))
         return processed_results
+
+    def process_artist(self, artist : str):
+        """
+        If an artist name is used by several artists, Discogs appends a
+        number at the end, e.g. Queen (2).
+        If this is the case, this function removes it.
+        """
+        regex_result = re.findall("[(\d)]", artist)
+        if len(regex_result) == 0:
+            return artist
+        else:
+            return artist[:-len(regex_result) - 1]
 
     def process_year(self, master : Release, main_release : Release) -> int | str:
         """

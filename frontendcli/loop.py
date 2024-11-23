@@ -59,11 +59,12 @@ def enter(stdscr : window) -> None:
             user_input = input_box.gather().strip().replace("_", " ")
             input_win.clear()
             input_win.refresh()
-        
-        if user_input != "":
             content_win.addstr(3, 0, "Searching...", BLUE)
             content_win.refresh()
             results = discogs_helper.search(user_input)
+        elif key == "KEY_RESIZE":
+            y, x = stdscr.getmaxyx()
+            stdscr.resize(y, x)
 
         # header_win.bkgd(" ", WHITE)
         stdscr.refresh()
@@ -72,7 +73,6 @@ def enter(stdscr : window) -> None:
         content_win.addstr(1, 0, user_input, DEFAULT | A_REVERSE)
         content_win.addstr(2, 0, key, DEFAULT | A_REVERSE)
         if user_input != "":
-            user_input = ""
             content_win.clear()
             for i in range(len(results)):
                 content_win.addstr(4 + i, 0, f"{results[i].artists} - {results[i].title}", BLUE)
