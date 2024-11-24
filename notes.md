@@ -184,11 +184,26 @@ screen.play(..., unhandled_input=global_shortcuts, ...)
 ### tabular data
 * the widget ``MultiColumnListBox`` exists for this purpose
 * the column names are initialized as a simple list of strings
-* the data rows are initialized as a list of tuples that contain a list (data) and an integer (row) (? a bit confusing)
+* the data rows are initialized as a list of tuples that contain a list (data) and an integer (ALBUM RELEASE ID!) see the following:
+```
+data = [
+    (["2024", "Machine Girl", "MG Ultra", "Electronic", "10"], 0),
+    (["2018", "Machine Girl", "The Ugly Art", "Electronic", "9"], 1)
+]
+```
+* the ``MultiColumnListBox`` supports the up and down arrow keys for selecting an entry. the current entry's internal value (ALBUM RELEASE ID IN MY CASE) can be gotten from ``self.name_of_list_widget.value``
 * the column widths can be initialized as such:
     - ``">6"`` == a right aligned column that is 6 characters wide
     - ``"<20%"`` == a left aligned column with a width of 20% of the widget
     - ``"^0"`` == a center aligned column that takes up the rest of the space available
+
+### popups
+* i'm going to need several popup frames for this program:
+    - one for editing the rating
+    - one for viewing / editing the thoughts
+    - one for searching and adding new albums to the bucket list
+    - one for searching and adding new albums to the listened list + ability to add rating & thoughts
+* asciimatics does offer a class called ``PopUpDialog`` which is a good starting point for this purpose, but it isn't exactly suited to my needs. because the code for that class isn't very long, i'm going to write my own implementation(s) for these use cases
 
 ## ui / album management
 * the differents sections should act as different screens that get "switched out", similar to the notebook widget in gtk. think tabs
