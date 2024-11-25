@@ -2,91 +2,135 @@ from backend.discogs import DiscogsHelper
 from backend.files import FileWriter
 from backend.models import Listened
 from backend.models import ProcessedRelease
-from curses import *
-from curses import textpad
+
+import sys
+
+from asciimatics.scene import Scene
+from asciimatics.screen import Screen
+from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label
+from asciimatics.event import Event, KeyboardEvent, MouseEvent
+from asciimatics.exceptions import NextScene, ResizeScreenError, StopApplication
+
+class BucketListFrame(Frame):
+    """
+    The frame that contains the list of music that the user has yet to listen to.
+    """
+    def __init__(self, screen : Screen):
+        """Initialize this BucketListFrame."""
+        super(BucketListFrame, self).__init__(
+            screen=screen,
+            height=screen.height,
+            width=screen.width,
+            has_border=False,
+            can_scroll=False,
+            name="BucketListFrame"
+        )
+        self._list = MultiColumnListBox(
+            height=Widget.FILL_FRAME,
+            columns=["<7", "<30%", "<40%", "<15%"],
+            options=[],
+            titles=["Year", "Artists", "Title", "Genres"],
+            name="BucketList",
+            add_scroll_bar=True
+        )
+        layout1 = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout=layout1)
+        layout1.add_widget(self._list)
+        # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
+        layout1.add_widget(Label(label="Test", align="<", height=1))
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+    def process_event(self, event : Event):
+        """Do the key handling for this Frame."""
+        if isinstance(event, KeyboardEvent):
+            if event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
+                exit_application("Music Manager stopped.")
+            elif event.key_code == Screen.KEY_F2:
+                # TODO: Help dialog showing keys etc.
+                pass
+            elif event.key_code == ord("1"):
+                switch_to_tab("ListenedListTab")
+            elif event.key_code == ord("2"):
+                switch_to_tab("BucketListTab")
+
+class ListenedListFrame(Frame):
+    """
+    The frame that contains the list of music that has already been listened to.
+    In addition to the expected fields, its table (MultiColumnListBox) also contains
+    a "rating" field and a "thoughts" field.
+    """
+    def __init__(self, screen : Screen):
+        """Initialize this ListenedListFrame."""
+        super(ListenedListFrame, self).__init__(
+            screen=screen,
+            height=screen.height,
+            width=screen.width,
+            has_border=False,
+            can_scroll=False,
+            name="BucketListFrame"
+        )
+        self._list = MultiColumnListBox(
+            height=Widget.FILL_FRAME,
+            columns=["<7", "<30%", "<42%", "<17%", "^6", "^7"],
+            options=[],
+            titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
+            name="BucketList",
+            add_scroll_bar=True
+        )
+        layout1 = Layout(columns=[1], fill_frame=False)
+        self.add_layout(layout=layout1)
+        layout1.add_widget(self._list)
+        # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
+        layout1.add_widget(Label(label="Test", align="<", height=1))
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+    def process_event(self, event : Event):
+        """Do the key handling for this Frame."""
+        if isinstance(event, KeyboardEvent):
+            if event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
+                exit_application("Music Manager stopped.")
+            elif event.key_code == Screen.KEY_F2:
+                # TODO: Help dialog showing keys etc.
+                pass
+            elif event.key_code == ord("1"):
+                switch_to_tab("ListenedListTab")
+            elif event.key_code == ord("2"):
+                switch_to_tab("BucketListTab")
 
 def get_token() -> str:
     """Reads and returns the Discogs API personal access token from the specified file."""
     return open("token.txt", "r").read()
 
-def initialize_curses_colors() -> None:
-    init_pair(1, COLOR_BLACK, COLOR_WHITE)
-    init_pair(2, COLOR_BLACK, COLOR_BLACK)
-    init_pair(3, COLOR_WHITE, COLOR_WHITE)
-    init_pair(4, COLOR_WHITE, COLOR_RED)
-    init_pair(5, COLOR_WHITE, COLOR_BLUE)
+def exit_application(text : str):
+    """Exit the program with the given text message."""
+    raise StopApplication(message=text)
 
-def enter(stdscr : window) -> None:
+def switch_to_tab(tab_name : str):
+    """Switch to the specified tab (Scene)."""
+    raise NextScene(tab_name)
+
+def enter(screen : Screen, scene : Scene):
     """Entrypoint for the main loop of the program."""
     file_writer = FileWriter()
     discogs_helper = DiscogsHelper(get_token())
+    scenes = [
+        Scene([ListenedListFrame(screen)], duration=-1, name="ListenedListTab"),
+        Scene([BucketListFrame(screen)], duration=-1, name="BucketListTab")
+    ]
+    screen.play(scenes=scenes, stop_on_resize=True, start_scene=scene)
 
-    initialize_curses_colors()
-    DEFAULT = color_pair(1)
-    BLACK = color_pair(2)
-    WHITE = color_pair(3)
-    RED = color_pair(4)
-    BLUE = color_pair(5)
-    curs_set(0)
+### TESTING
+# master_release = discogs_helper.get_release(3643167)
 
-    y, x = stdscr.getmaxyx()
-    stdscr.bkgd(" ", BLACK)
+# test : list[ProcessedRelease] = discogs_helper.search(input())
+# for x in test:
+#     print(x)
 
-    header_win : window = newwin(1, x, 0, 0)
-    header_win.bkgd(" ", WHITE)
-
-    content_win : window = newwin(y - 1, x, 1, 0)
-    content_win.bkgd(" ", RED)
-
-    input_win : window = newwin(1, 20, 1, 0)
-    input_win.bkgd("_", DEFAULT)
-    input_box = textpad.Textbox(input_win)
-
-    key = ""
-    user_input = ""
-    results = []
-    while True:
-        # stdscr.addstr(0, 0, "str")
-        if key == "q" or key == "Q":
-            break
-        elif key == "1":
-            content_win.bkgd(" ", BLUE)
-        elif key == "2":
-            content_win.bkgd(" ", RED)
-        elif key == "t" or key == "T":
-            input_box.do_command(KEY_BACKSPACE)
-            input_box.edit()
-            user_input = input_box.gather().strip().replace("_", " ")
-            input_win.clear()
-            input_win.refresh()
-            content_win.addstr(3, 0, "Searching...", BLUE)
-            content_win.refresh()
-            results = discogs_helper.search(user_input)
-        elif key == "KEY_RESIZE":
-            y, x = stdscr.getmaxyx()
-            stdscr.resize(y, x)
-
-        # header_win.bkgd(" ", WHITE)
-        stdscr.refresh()
-        header_win.refresh()
-        content_win.clear()
-        content_win.addstr(1, 0, user_input, DEFAULT | A_REVERSE)
-        content_win.addstr(2, 0, key, DEFAULT | A_REVERSE)
-        if user_input != "":
-            content_win.clear()
-            for i in range(len(results)):
-                content_win.addstr(4 + i, 0, f"{results[i].artists} - {results[i].title}", BLUE)
-        content_win.refresh()
-        key = stdscr.getkey()
-
-    ### TESTING
-    # master_release = discogs_helper.get_release(3643167)
-    
-    # test : list[ProcessedRelease] = discogs_helper.search(input())
-    # for x in test:
-    #     print(x)
-
-    # file_writer.ensure_files_exist()
-    # file_writer.read_album_list()
-    # file_writer.remove_from_album_list(123)
-    # file_writer.remove_from_album_list(235346546)
+# file_writer.ensure_files_exist()
+# file_writer.read_album_list()
+# file_writer.remove_from_album_list(123)
+# file_writer.remove_from_album_list(235346546)
