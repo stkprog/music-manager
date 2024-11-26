@@ -1,4 +1,4 @@
-from frontendcli.loop import enter
+from frontendcli.tui import enter
 
 import sys
 

@@ -7,7 +7,7 @@ import sys
 
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
-from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label
+from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label, PopUpDialog
 from asciimatics.event import Event, KeyboardEvent, MouseEvent
 from asciimatics.exceptions import NextScene, ResizeScreenError, StopApplication
 
@@ -54,6 +54,8 @@ class BucketListFrame(Frame):
                 switch_to_tab("ListenedListTab")
             elif event.key_code == ord("2"):
                 switch_to_tab("BucketListTab")
+            elif event.key_code in [ord("c"), ord("C")]:
+                self._scene.add_effect(CreditPopUpDialog(self._screen))
 
 class ListenedListFrame(Frame):
     """
@@ -73,7 +75,7 @@ class ListenedListFrame(Frame):
         )
         self._list = MultiColumnListBox(
             height=Widget.FILL_FRAME,
-            columns=["<7", "<30%", "<42%", "<17%", "^6", "^7"],
+            columns=["<7", "<30%", "<37%", "<13%", "<6", "<7"],
             options=[],
             titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
             name="BucketList",
@@ -100,6 +102,19 @@ class ListenedListFrame(Frame):
                 switch_to_tab("ListenedListTab")
             elif event.key_code == ord("2"):
                 switch_to_tab("BucketListTab")
+            elif event.key_code in [ord("c"), ord("C")]:
+                self._scene.add_effect(CreditPopUpDialog(self._screen))
+
+class CreditPopUpDialog(PopUpDialog):
+    def __init__(self, screen : Screen):
+        message : str = "MusicManager was made by St. K. using python, asciimatics and the Discogs API."
+        super(CreditPopUpDialog, self).__init__(
+            screen=screen,
+            has_shadow=True,
+            buttons=["Ok"],
+            text=message,
+        )
+        # TODO: Nice effect using Stars? Might have to re-implement PopUpDialog for this as well
 
 def get_token() -> str:
     """Reads and returns the Discogs API personal access token from the specified file."""
