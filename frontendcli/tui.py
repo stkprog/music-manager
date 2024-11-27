@@ -1,7 +1,6 @@
 from backend.discogs import DiscogsHelper
 from backend.files import FileWriter
-from backend.models import Listened
-from backend.models import ProcessedRelease
+from backend.models import BucketAlbum, ListenedAlbum
 
 import sys
 
@@ -75,7 +74,7 @@ class ListenedListFrame(Frame):
         )
         self._list = MultiColumnListBox(
             height=Widget.FILL_FRAME,
-            columns=["<7", "<30%", "<37%", "<13%", "<6", "<7"],
+            columns=["<7", "<30%", "<37%", "<13%", "^12", "^8"],
             options=[],
             titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
             name="BucketList",
@@ -131,21 +130,11 @@ def switch_to_tab(tab_name : str):
 def enter(screen : Screen, scene : Scene):
     """Entrypoint for the main loop of the program."""
     file_writer = FileWriter()
+    file_writer.initialize()
     discogs_helper = DiscogsHelper(get_token())
+
     scenes = [
         Scene([ListenedListFrame(screen)], duration=-1, name="ListenedListTab"),
         Scene([BucketListFrame(screen)], duration=-1, name="BucketListTab")
     ]
     screen.play(scenes=scenes, stop_on_resize=True, start_scene=scene)
-
-### TESTING
-# master_release = discogs_helper.get_release(3643167)
-
-# test : list[ProcessedRelease] = discogs_helper.search(input())
-# for x in test:
-#     print(x)
-
-# file_writer.ensure_files_exist()
-# file_writer.read_album_list()
-# file_writer.remove_from_album_list(123)
-# file_writer.remove_from_album_list(235346546)

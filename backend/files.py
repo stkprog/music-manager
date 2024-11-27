@@ -1,100 +1,99 @@
 import os
 import json
-from backend.models import Listened
+import typing
+from backend.models import Album, BucketAlbum, ListenedAlbum
 
 MM_PATH : str = os.path.expanduser('~') + "/.music-manager"
-BUCKET_PATH : str = MM_PATH + "/bucketlist.txt"
-ALBUM_PATH : str = MM_PATH + "/albums.txt"
+BUCKET_PATH : str = MM_PATH + "/bucketlist.json"
+LISTENED_PATH : str = MM_PATH + "/albums.json"
+
+type BucketList = list[BucketAlbum]
+type ListenedList = list[ListenedAlbum]
 
 class FileWriter:
     """Utility class for managing local files that hold user data."""
 
     def __init__(self):
-        self.bucket_list : list = []
-        self.album_list : list = []
+        self.bucket_list : list[BucketAlbum] = []
+        self.listened_list : list[ListenedAlbum] = []
 
-    def ensure_files_exist(self) -> None:
+    def _ensure_files_exist(self) -> None:
         """
-        Create the album and bucket list files
+        Create the .music-manager folder and album and bucket list files
         and fill them with an empty array if they do not exist yet.
         """
+        # Make program folder if it doesn't exist
         if not os.path.isdir(MM_PATH):
             os.mkdir(MM_PATH)
 
+        # Create and fill files with empty array if they don't exist
         if not os.path.exists(BUCKET_PATH):
-            self.write_to_disk(BUCKET_PATH, [])
-        if not os.path.exists(ALBUM_PATH):
-            self.write_to_disk(ALBUM_PATH, [])
+            self.write_to_disk("bucket")
+        if not os.path.exists(LISTENED_PATH):
+            self.write_to_disk("listened")
 
-    def read_bucket_list(self) -> None:
-        """Read the bucket list file into the bucket_list variable."""
-        with open(BUCKET_PATH, "r", encoding="utf-8") as bucket_file:
-            self.bucket_list = json.load(bucket_file)
+    def initialize(self) -> None:
+        """Make sure that the program directory and files exist and read the files into memory."""
+        self._ensure_files_exist()
+        self._read_list_from_file(BUCKET_PATH)
+        self._read_list_from_file(LISTENED_PATH)
 
-    def add_to_bucket_list(self, release_id : int) -> None:
-        """Add a release to the bucket list if it isn't in the list yet."""
-        if release_id not in self.bucket_list:
-            self.bucket_list.append(release_id)
-            self.write_to_disk(BUCKET_PATH, self.bucket_list)
-
-    def remove_from_bucket_list(self, release_id : int) -> None:
-        """Remove a release from the bucket list."""
-        self.bucket_list.remove(release_id)
-        self.write_to_disk(BUCKET_PATH, self.bucket_list)
-
-    def read_album_list(self) -> None:
-        """
-        Read the album list file into the album_list variable.
-        The result is a list of Listened objects.
-        """
-        with open(ALBUM_PATH, "r", encoding="utf-8") as album_file:
-            temp : list = json.load(album_file)
+    def _read_list_from_file(self, file_path : str) -> None:
+        """Read the specified file into the appropriate list variable."""
+        with open(file_path, "r", encoding="utf-8") as list_file:
+            temp : list = json.load(list_file)
             for t in temp:
-                # ** = dictionary unpacking
+                # ** == dictionary unloading
                 # values from temp are mapped to class object
                 obj : dict = json.loads(t)
-                self.album_list.append(Listened(**obj))
+                if file_path == BUCKET_PATH:
+                    self.bucket_list.append(BucketAlbum(**obj))
+                elif file_path == LISTENED_PATH:
+                    self.listened_list.append(ListenedAlbum(**obj))
 
-    def add_to_album_list(self, new_entry : Listened) -> None:
-        """Add a release to the album list if it isn't in the list yet."""
+    def add_to_list(self, list_to_add_to : list, new_entry : Album) -> None:
+        """Add a release to the bucket list if it isn't in the list yet."""
         exists : bool = False
-        for a in self.album_list:
-            if a.release_id == new_entry.release_id:
+        for release in list_to_add_to:
+            if release.release_id == new_entry.release_id:
                 exists = True
                 break
         if not exists:
-            self.album_list.append(new_entry)
-            albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
-            self.write_to_disk(ALBUM_PATH, albums_list_serialized)
+            list_to_add_to.append(new_entry)
 
-    def edit_entry_in_album_list(self, edited_entry : Listened) -> None:
-        """Edit the rating or thoughts of a release if it can be found in the album list."""
-        for a in self.album_list:
-            if a.release_id == edited_entry.release_id:
-                a.rating = edited_entry.rating
-                a.thoughts = edited_entry.thoughts
-                albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
-                self.write_to_disk(ALBUM_PATH, albums_list_serialized)
+    def edit_entry_in_listened_list(self, release_id_to_edit : int, new_rating : int, new_thoughts : str) -> None:
+        """Edit the rating and / or thoughts of a release if it can be found in the listened list."""
+        for a in self.listened_list:
+            if a.release_id == release_id_to_edit:
+                a.rating = new_rating
+                a.thoughts = new_thoughts
                 break
 
-    def remove_from_album_list(self, release_id : int) -> None:
-        """Remove a release from the album list if it can be found."""
-        index_to_be_removed : int = 0
-        index_found : bool = False
-        for i in range(len(self.album_list)):
-            if self.album_list[i].release_id == release_id:
-                index_to_be_removed = i
-                index_found = True
+    def remove_from_list(self, list_to_delete_from : list, release_id : int) -> None:
+        """Remove a release from the specified list if it can be found in that list."""
+        for i in range(len(list_to_delete_from)):
+            if list_to_delete_from[i].release_id == release_id:
+                list_to_delete_from.pop(i)
                 break
-        if index_found:
-            self.album_list.pop(index_to_be_removed)
-            albums_list_serialized : list = list(map(Listened.toJSON, self.album_list))
-            self.write_to_disk(ALBUM_PATH, albums_list_serialized)
 
-    def write_to_disk(self, path : str, array : list) -> None:
+    # TODO: Find a solution that doesn't require using an extra utility variable
+    # for checking which list to use, because this isn't ideal
+    def write_to_disk(self, which_list : str) -> None:
         """
-        Write the given data to the specified path.
-        The previous data is overwrittenin the process.
+        Write the specified list to its appropriate file.
+        The previous data is overwritten in the process.
         """
-        with open(path, "w", encoding="utf-8") as file:
-            json.dump(array, file)
+        file_path : str = ""
+        list_to_write : list[Album] = []
+        if which_list == "bucket":
+            file_path = BUCKET_PATH
+            list_to_write = self.bucket_list
+        elif which_list == "listened":
+            file_path = LISTENED_PATH
+            list_to_write = self.listened_list
+
+        # Use toJSON from Album superclass to convert the list of objects to a list of JSON strings
+        serialized_list = list(map(Album.toJSON, list_to_write))
+
+        with open(file_path, "w", encoding="utf-8") as list_file:
+            json.dump(serialized_list, list_file)
