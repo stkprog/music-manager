@@ -1,6 +1,6 @@
 from discogs_client import Client
 from discogs_client.models import Release, MixedPaginatedList
-from backend.models import ProcessedRelease
+from backend.models import BucketAlbum
 import re
 
 class DiscogsHelper:
@@ -9,11 +9,11 @@ class DiscogsHelper:
     def __init__(self, token) -> None:
         self.d : Client = Client("MusicManager/0.1", user_token=token)
 
-    def search(self, user_query : str) -> list[ProcessedRelease]:
+    def search(self, user_query : str) -> list[BucketAlbum]:
         """Search for the main release of albums using the text provided by the user."""
         results : MixedPaginatedList = self.d.search(user_query, type="master").page(1)[0:10]
         artists : str = ""
-        processed_results : list[ProcessedRelease] = []
+        processed_results : list[BucketAlbum] = []
 
         # Searching for "master releases" instead of "releases"
         # and then the main release. multiple releases of the same album
@@ -27,7 +27,7 @@ class DiscogsHelper:
             genres = self.array_to_comma_separated_string(main_r.genres)
             year : int | str = self.process_year(r, main_r)
 
-            processed_results.append(ProcessedRelease(
+            processed_results.append(BucketAlbum(
                 main_r.id, artists, main_r.title, genres, year
             ))
         return processed_results
