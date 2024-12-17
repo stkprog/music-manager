@@ -1,141 +1,35 @@
 # keeping track of things
 
-## curses
-### terminal resizing
-* minimal example:
-    - when resizing the terminal window with the mouse, the key from ``getkey()`` is called **KEY_RESIZE**
-    - this also works with XFCE4's resizing shortcut (_Alt+F8_)
-    - ``curses.update_lines_cols()`` updates the numbers
-    - current values can be accessed using ``stdscr.getmaxyx()``
-    - program doesn't terminate when resizing (!!!)
-```
-def main(stdscr : window):
-    while(True):
-        y, x = stdscr.getmaxyx()
-        update_lines_cols()
-
-        stdscr.clear()
-        stdscr.addstr(0, 1, "height: " + str(y), A_NORMAL)
-        stdscr.addstr(1, 1, "width: " + str(x), A_NORMAL)
-        stdscr.addstr(2, 1, key)
-        stdscr.refresh()
-        key = stdscr.getkey()
-wrapper(main)
-```
-### header lines
-* minimal examples:
-```
-def initialize_header_edge_aligned(stdscr : window, side : str, y : int):
-    max_term_width : int = stdscr.getmaxyx()[1]
-    header_text : str = "Music-Manager 0.1"
-    remaining_space : int = max_term_width - len(header_text)
-
-    if side == "left":
-        header_text += " " * remaining_space
-    elif side == "right":
-        header_text = " " * remaining_space + header_text
-
-    stdscr.addstr(y, 0, header_text)
-```
-* for this one, the center position is calculated by:
-    - dividing the maximum width by 2
-    - subtracting half of the width of the text that is to be positioned in the center
-```
-def initialize_header_center(stdscr : window, y):
-    max_term_width : int = stdscr.getmaxyx()[1]
-    header_text : str = "Music-Manager 0.1"
-    
-    space_before : int = int((max_term_width / 2) - (len(header_text) / 2))
-    space_after : int = max_term_width - (space_before + len(header_text))
-    header_text = (" " * space_before) + header_text + (" " * space_after)
-
-    stdscr.addstr(y, 0, header_text)
-```
-
-### footer line
-* minimal example:
-```
-def initialize_footer(stdscr : window, color : int):
-    max_term_height : int = stdscr.getmaxyx()[0] - 1
-    max_term_width : int = stdscr.getmaxyx()[1]
-
-    text : tuple = ("G", "Quit", "S", "Save")
-
-    stdscr.move(max_term_height, 0) # Move cursor down to final line
-    for i in range(len(text)):
-        # Single Character ("Q", "S")
-        if i % 2 == 0:
-            stdscr.addstr(text[i], color | A_REVERSE)
-        # Action word ("Quit", "Save")
-        elif i % 2 == 1:
-            stdscr.addstr(" " + text[i] + "   ", color)
-
-    current_position : int = stdscr.getyx()[1]
-    remaining_space : int = max_term_width - current_position - 1
-    stdscr.addstr(" " * remaining_space, color)
-    # Fill bottom right corner with given attribute
-    # If a string of length 1 or char isn't passed, a caret (^) will be shown
-    stdscr.insch(" ", color)
-```
-
-### pads
-* fixed window that is seen, content inside "moves"
-* test strings always seemed to be cut off by atleast one character on the left side
-
 ## local file management
 * save both of the following on any change, for safety?
 ### bucketlist albums
-* no additional information from user here
-* so could save as an array of IDs (from discogs) in a .json array
-* load in program as array?
 ```
 [
-    3612706,
-    3643167,
-    3252004
+    {
+        "release_id": 34234,
+        "artists": "lorem",
+        "title": "ipsum",
+        "genres": "hip hop",
+        "year": 2003
+    }
 ]
 ```
 ### listened to albums
 * user should be able to give ratings and perhaps their thoughts on an album
-* saved in .json as an array of objects?
-* load in program as an array of class-objects?
 ```
 [
     {
-        "release_id": 3612706,
+        "release_id": 25345436,
+        "artists": "lorem",
+        "title": "ipsum",
+        "genres": "dolor",
+        "year": 2000,
         "rating": 6,
-        "thoughts": "lorem ipsum"
-    },
-    {
-        "release_id": 3643167,
-        "rating": 3,
-        "thoughts": "ipsum lorem"
-    },
-    {
-        "release_id": 3252004,
-        "rating": 6,
-        "thoughts": "lorem ipsum"
+        "thoughts": "lorem ispum dolor..." 
     }
 ]
 ```
-* either that, or take info from discogs and save it all locally:
-```
-[
-    {
-        "artist": "lorem",
-        "album": "ipsum",
-        "year": 2000,
-        "genre": "dolor",
-        "rating": 6,
-        "thoughts": "lorem ispum dolor..." 
-    },
-    // ...
-]
-```
-* not sure yet which option would be the better one
-* realistically probably the first one. i'm using the discogs api for a reason
-* should probably check if the api has access limits
-* if not, experiment with caching
+* this is very much redundant, but because the discogs api is limited to one query per second, this is going to be the simpler solution for now
 
 ## asciimatics
 * considering changing to this libary, because it's higher level than curses
@@ -150,9 +44,13 @@ from asciimatics.widgets.utilities import THEMES
 * scene
     - frame
         * layout
+            - widget
+            - widget
         * layout
+            - widget
     - frame
         * layout
+            - widget
 * <u>LAYOUTS:</u>
     - hold widgets in a specified amount of columns
     - columns can be the same width (1, 1) or different widths (2, 1)
@@ -198,11 +96,26 @@ data = [
     - ``"^0"`` == a center aligned column that takes up the rest of the space available
 
 ### popups
-* i'm going to need several popup frames for this program:
-    - one for editing the rating
-    - one for viewing / editing the thoughts
-    - one for searching and adding new albums to the bucket list
-    - one for searching and adding new albums to the listened list + ability to add rating & thoughts
+* <u>i'm going to need several popup frames for this program:</u>
+    - editing the rating and thoughts
+        * only callable from the LISTENED tab
+        * rating and thoughts as textboxes?
+        * "change" and "cancel" as buttons
+    - searching and adding new albums to the bucketlist USING DISCOGS
+        * only callable from the BUCKET tab
+        * a small textbox for entering a search term
+        * output and selection using a multicolumnbox
+        * adding on enter-press?
+        * "cancel" as a button
+    - adding new albums to the bucketlist MANUALLY
+        * only callable from the BUCKET tab
+        * a small form for entering all the values
+        * a requirement for this is some kind of functionality that keeps track of release_id's for manually added tracks - perhaps just counting up from 1
+        * "add" and "cancel" as buttons
+    - adding new albums to the listened list
+        * only callable from the BUCKET tab
+        * a small form showing the data of the album and allowing the user to enter rating and thoughts
+        * "add to listened" and "cancel" as buttons 
 * asciimatics does offer a class called ``PopUpDialog`` which is a good starting point for this purpose, but it isn't exactly suited to my needs. because the code for that class isn't very long, i'm going to write my own implementation(s) for these use cases
 
 ## ui / album management
