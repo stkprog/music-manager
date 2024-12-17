@@ -97,26 +97,118 @@ data = [
 
 ### popups
 * <u>i'm going to need several popup frames for this program:</u>
-    - editing the rating and thoughts
-        * only callable from the LISTENED tab
-        * rating and thoughts as textboxes?
-        * "change" and "cancel" as buttons
-    - searching and adding new albums to the bucketlist USING DISCOGS
+    - 1: searching and adding new albums to the bucketlist USING DISCOGS
         * only callable from the BUCKET tab
         * a small textbox for entering a search term
         * output and selection using a multicolumnbox
         * adding on enter-press?
         * "cancel" as a button
-    - adding new albums to the bucketlist MANUALLY
+    - 2: adding new albums to the bucketlist MANUALLY
         * only callable from the BUCKET tab
         * a small form for entering all the values
         * a requirement for this is some kind of functionality that keeps track of release_id's for manually added tracks - perhaps just counting up from 1
         * "add" and "cancel" as buttons
-    - adding new albums to the listened list
+    - 3: adding new albums to the listened list
         * only callable from the BUCKET tab
         * a small form showing the data of the album and allowing the user to enter rating and thoughts
         * "add to listened" and "cancel" as buttons 
+    - 4: editing the rating and thoughts
+        * only callable from the LISTENED tab
+        * rating and thoughts as textboxes?
+        * "change" and "cancel" as buttons
 * asciimatics does offer a class called ``PopUpDialog`` which is a good starting point for this purpose, but it isn't exactly suited to my needs. because the code for that class isn't very long, i'm going to write my own implementation(s) for these use cases
+* 3 and 4 would probably look identical, so i wonder if there would be a way to combine them
+* loading data into widgets:
+    - using the dedicated ``data`` variable from the class ``Frame`` or the ``value`` variable from the specific widget ([src](https://asciimatics.readthedocs.io/en/stable/widgets.html#setting-values))
+    * i might use the former method for the ``MultiColumnListBox``es containing the user's saved albums, and the latter method for PopUps
+
+listened_tab_data = {
+
+}
+---
+* some possible pseudo-code:
+```
+*-*-*-*-*-*-*-*-*-* 2: adding new albums to the bucketlist MANUALLY *-*-*-*-*-*-*-*-*-*
+
+SomePopUp:
+...
+# PopUp title = "Add a bucket album manually"
+layout1 = Layout([1])
+self.add_layout(layout1)
+
+# Artist(s)
+layout1.add_widget(Text(
+    label="Artist(s):",
+    name="",
+    on_chance="",
+    validator="some_optional_regex"
+))
+
+# Title
+layout1.add_widget(Text(
+    label="Title:",
+    name="",
+    on_chance="",
+    validator="some_optional_regex"
+))
+
+# Year
+layout1.add_widget(Text(
+    label="Year:",
+    name="",
+    on_chance="",
+    validator="some_optional_regex"
+))
+
+# Genre(s)
+layout1.add_widget(Text(
+    label="Genre(s):",
+    name="",
+    on_chance="",
+    validator="some_optional_regex"
+))
+
+
+
+*-*-*-*-*-*-*-*-*-* 4: editing the rating and thoughts *-*-*-*-*-*-*-*-*-*
+
+SomePopUp:
+...
+# PopUp title = "Edit rating and thoughts"
+layout1 = Layout([1])
+self.add_layout(layout1)
+layout1.add_widget(
+    Label("title by artist (year) [genre]"), 1
+)
+
+layout2 = Layout([1, 15])
+self.add_layout(layout2)
+layout2.add_widget(
+    Label("Rating:"), 1
+)
+# Put in existing value
+layout2.add_widget(
+    DropdownList(
+        options=tuple([str(i + 1), i + 1] for i in range(10)),
+        label="Rating",
+        name="",
+        on_chance="",
+        ...
+    ),
+    2
+)
+
+layout2.add_widget(
+    TextBox(
+        height=10,
+        label="Thoughts",
+        name="",
+        parser=AsciimaticsParser(),
+        line_wrap=True,
+        on_change=""
+    ), 2
+)
+```
 
 ## ui / album management
 * the differents sections should act as different screens that get "switched out", similar to the notebook widget in gtk. think tabs
