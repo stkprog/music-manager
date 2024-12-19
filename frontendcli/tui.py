@@ -93,7 +93,7 @@ class BucketListFrame(Frame):
         layout1.add_widget(self._list)
         # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
         layout1.add_widget(
-            Label(label="Q=exit   1=switch to listened list   l=add selected to listened list   x=remove selected   c=credits", align="<", height=1)
+            Label(label="Q=exit   1=switch to listened list   L=add to listened list   D=add using discogs   M=add manually   X=remove selected   C=credits", align="<", height=1)
         )
 
         # Set theme that was initialized at the top
@@ -115,23 +115,43 @@ class BucketListFrame(Frame):
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
         if isinstance(event, KeyboardEvent):
-            if event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
-                exit_application("Music Manager stopped.")
-            elif event.key_code == Screen.KEY_F2:
-                # TODO: Help dialog showing keys etc.
-                pass
-            elif event.key_code == ord("1"):
+            amount_of_albums = len(self._list.options)
+
+            # Switch to ListenedListTab
+            if event.key_code == ord("1"):
                 switch_to_tab("ListenedListTab")
+            # Show PopUpDialog with credits
             elif event.key_code in [ord("c"), ord("C")]:
-                self._scene.add_effect(CreditPopUpDialog(self._screen))
-            elif event.key_code in [ord("l"), ord("L")]:
-                # self._scene.add_effect(AddToListenedPopupDialog(self._screen, self._list.value))
-                pass
-            elif event.key_code in [ord("x"), ord("X")]:
+                self._scene.add_effect(PopUpDialog(
+                    screen=self._screen,
+                    text="MusicManager was made by St. K. using Python, asciimatics and the Discogs API.",
+                    has_shadow=True,
+                    buttons=["Close"],
+                ))
+            # Delete selected entry from list
+            elif event.key_code in [ord("x"), ord("X")] and amount_of_albums > 0:
                 self.delete_bucket_album(self.find_index_of_entry(self._list.value))
                 self.reload_bucket_list()
+            # AddToBucketListDiscogsPopUp
+            elif event.key_code in [ord("d"), ord("D")]:
+                self._scene.add_effect(AddToBucketListDiscogsPopUp(
+                    self._screen
+                ))
+            # AddToBucketListManuallyPopUp
+            elif event.key_code in [ord("m"), ord("M")]:
+                self._scene.add_effect(AddToBucketListManuallyPopUp(
+                    self._screen
+                ))
+            # AddToListenedListPopUp
+            elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
+                self._scene.add_effect(AddToListenedListPopUp(
+                    self._screen, album_index=self.find_index_of_entry(self._list.value)
+                ))
+            # Exit the program
+            elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
+                exit_application("Music Manager stopped.")
 
-        return super(BucketListFrame, self).process_event(event)
+        return super().process_event(event)
 
 class ListenedListFrame(Frame):
     """
@@ -152,7 +172,7 @@ class ListenedListFrame(Frame):
         self._list = MultiColumnListBox(
             height=Widget.FILL_FRAME,
             columns=["<7", "<30%", "<37%", "<13%", "^12", "^8"],
-            options=[],
+            options=test_data,
             titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
             name="BucketList",
             add_scroll_bar=True
@@ -162,7 +182,7 @@ class ListenedListFrame(Frame):
         layout1.add_widget(self._list)
         # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
         layout1.add_widget(
-            Label(label="Q=exit   2=switch bucketlist   e=edit rating & thoughts   x=remove selected   c=credits", align="<", height=1)
+            Label(label="Q=exit   2=switch bucketlist   E=edit rating & thoughts   X=remove selected   C=credits", align="<", height=1)
         )
 
         # Set theme that was initialized at the top
@@ -171,46 +191,168 @@ class ListenedListFrame(Frame):
         self.fix()
 
     def find_index_of_entry(self, release_id):
-        # for index, entry in enumerate(test_data):
-        #     if entry[1] == release_id:
-        #         return index
+        for index, entry in enumerate(test_data):
+            if entry[1] == release_id:
+                return index
         pass
 
     def delete_listened_album(self, release_id : int):
-        # test_data.pop(release_id)
-        pass
+        test_data.pop(release_id)
     
     def reload_listened_list(self):
-        # self._list.options = options
-        pass
+        self._list.options = test_data
 
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
         if isinstance(event, KeyboardEvent):
-            if event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
-                exit_application("Music Manager stopped.")
-            elif event.key_code == Screen.KEY_F2:
-                # TODO: Help dialog showing keys etc.
-                pass
-            elif event.key_code == ord("2"):
+            amount_of_albums = len(self._list.options)
+
+            # Switch to BucketListTab
+            if event.key_code == ord("2"):
                 switch_to_tab("BucketListTab")
+            # Show PopUpDialog with credits
             elif event.key_code in [ord("c"), ord("C")]:
-                self._scene.add_effect(CreditPopUpDialog(self._screen))
-            elif event.key_code in [ord("X"), ord("X")]:
-                self.delete_bucket_album(self.find_index_of_entry(self._list.value))
-                self.reload_bucket_list()
+                self._scene.add_effect(PopUpDialog(
+                    screen=self._screen,
+                    text="MusicManager was made by St. K. using Python, asciimatics and the Discogs API.",
+                    has_shadow=True,
+                    buttons=["Close"],
+                ))
+            # Delete selected entry from list
+            elif event.key_code in [ord("x"), ord("X")] and amount_of_albums > 0:
+                self.delete_listened_album(self.find_index_of_entry(self._list.value))
+                self.reload_listened_list()
+            # EditListenedRatingAndThoughtsPopUp
+            elif event.key_code in [ord("e"), ord("E")] and amount_of_albums > 0:
+                self._scene.add_effect(EditListenedRatingAndThoughtsPopUp(
+                    self._screen, album_index=self.find_index_of_entry(self._list.value)
+                ))
+            # Exit the program
+            elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
+                exit_application("Music Manager stopped.")
 
-        return super(ListenedListFrame, self).process_event(event)
+        return super().process_event(event)
 
-class CreditPopUpDialog(PopUpDialog):
-    def __init__(self, screen : Screen):
-        message : str = "MusicManager was made by St. K. using python, asciimatics and the Discogs API."
-        super(CreditPopUpDialog, self).__init__(
-            screen=screen,
-            has_shadow=True,
-            buttons=["Close"],
-            text=message
+class CustomPopUpBase(Frame):
+    """
+    Base for my own PopUpDialogs, as the one from Asciimatics isn't sufficient for my needs.
+    This base leaves the definiton of Layouts and adding of Widgets to the child classes.
+    """
+    def __init__(self, screen : Screen, title : str):
+        width = screen.width * 2 // 3   # 2 thirds of the screen's width
+        height = screen.height * 3 // 5 # 3 fifths of the screen's height
+        # Initialize Frame
+        super().__init__(
+            screen, height, width, has_shadow=True, is_modal=True, has_border=True, title=title, can_scroll=False,
         )
+        # TODO: Currently theme is passable as an argument
+        # Perhaps define a separate theme for PopUps
+        self.set_theme("warning")
+
+    def process_event(self, event):
+        """Do the key handling for this Frame."""
+        if isinstance(event, KeyboardEvent):
+            if event.key_code in [ord("q"), ord("Q")]:
+                self._close()
+
+    def _close(self):
+        """Exit out of popup."""
+        self._scene.remove_effect(self)
+
+class AddToBucketListDiscogsPopUp(CustomPopUpBase):
+    """
+    A PopUp to be used for adding releases to the bucketlist using Discogs' search function.
+    Should only be instantiated from the BucketListTab.
+    It contains a small Text widget for entering a query with a "search" button next to it.
+    The result is shown using a Label.
+    A "Add" and "Cancel" button are the two options for leaving this PopUp.
+    """
+    # TODO: Implement a check that makes sure albums aren't being added twice
+    def __init__(self, screen : Screen):
+        # Initialize CustomPopUpBase
+        super().__init__(
+            screen, title="Add an album to the bucketlist using Discogs"
+        )
+
+        # TODO: Add Widgets for AddToBucketListDiscogsPopUp
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+class AddToBucketListManuallyPopUp(CustomPopUpBase):
+    """
+    A PopUp to be used for adding albums to the bucketlist by entering release info manually.
+    Should only be instantiated from the BucketListTab.
+    For this purpose, a form consisting of TextBox / Text widgets is provided.
+    A "Add" and "Cancel" button are the two options for leaving this PopUp.
+    """
+    # TODO: Implement a check that makes sure albums aren't being added twice
+    # TODO: Implement a mechanism that creates and checks unique release IDs
+    def __init__(self, screen : Screen):
+        # Initialize CustomPopUpBase
+        super().__init__(
+            screen, title="Add an album to the bucketlist manually"
+        )
+
+        # TODO: Add Widgets for AddToBucketListManuallyPopUp
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+class AddToListenedListPopUp(CustomPopUpBase):
+    """
+    A PopUp to be used for moving albums from the bucketlist to the listened list.
+    The album's data will be shown.
+    Should only be instantiated from the BucketListTab.
+    The user can input their rating using a DropdownList and their thoughts using a TextBox.
+    A "Add to listened albums" and "Cancel" button are the two options for leaving this PopUp.
+    """
+    # TODO: Implement a check that makes sure albums aren't being added twice
+    def __init__(self, screen : Screen, album_index : int):
+        text = "Add '{}' to list of listened albums"
+        album_title = test_data[album_index][0][2]
+
+        # Shorten album title incase it's too long
+        popup_width = screen.width * 2 // 3
+        max_album_length = popup_width - len(text) - 2  # minus 2 to account for the curly braces
+        if len(album_title) > max_album_length:
+            album_title = album_title[:max_album_length - 3] + "..."
+
+        text = text.format(album_title)
+
+        # Initialize CustomPopUpBase
+        super().__init__(
+            screen, title=text
+        )
+
+        # TODO: Add Widgets for AddToListenedListPopUp
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
+    """
+    A PopUp used for editing the ratings and thoughts for a given album from the listened list.
+    Should only be instantiated from the ListenedListTab.
+    The user can input their rating using a DropdownList and their thoughts using a TextBox.
+    A "Apply change" and "Cancel" button are the two options for leaving this PopUp.
+    """
+    def __init__(self, screen : Screen, album_index : int):
+        text = "Edit rating and thoughts for '" + test_data[album_index][0][2] + "'"
+        # Shorten incase of long album title
+        popup_width = screen.width * 2 // 3 - 4 # 2 to account for single quotes
+        if len(text) > (popup_width):
+            text = text[:popup_width - 4] + "...'"
+    
+        # Initialize CustomPopUpBase
+        super().__init__(
+            screen, title=text
+        )
+
+        # TODO: Add Widgets for EditListenedRatingAndThoughtsPopUp
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
 
 def get_token() -> str:
     """Reads and returns the Discogs API personal access token from the specified file."""
