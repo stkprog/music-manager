@@ -3,10 +3,12 @@ from backend.files import FileWriter
 from backend.models import BucketAlbum, ListenedAlbum
 
 import sys
+import string
+import random
 
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
-from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label, PopUpDialog, TextBox
+from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label, PopUpDialog, TextBox, Text, Divider
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import Event, KeyboardEvent, MouseEvent
 from asciimatics.exceptions import NextScene, ResizeScreenError, StopApplication
@@ -88,7 +90,7 @@ class BucketListFrame(Frame):
             name="BucketList",
             add_scroll_bar=True
         )
-        layout1 = Layout(columns=[1], fill_frame=True)
+        layout1 : Layout = Layout(columns=[1], fill_frame=True)
         self.add_layout(layout=layout1)
         layout1.add_widget(self._list)
         # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
@@ -140,7 +142,7 @@ class BucketListFrame(Frame):
             # AddToBucketListManuallyPopUp
             elif event.key_code in [ord("m"), ord("M")]:
                 self._scene.add_effect(AddToBucketListManuallyPopUp(
-                    self._screen
+                    self._screen, width=self._screen.width * 2 // 3, height=12
                 ))
             # AddToListenedListPopUp
             elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
@@ -177,7 +179,7 @@ class ListenedListFrame(Frame):
             name="BucketList",
             add_scroll_bar=True
         )
-        layout1 = Layout(columns=[1], fill_frame=False)
+        layout1 : Layout = Layout(columns=[1], fill_frame=False)
         self.add_layout(layout=layout1)
         layout1.add_widget(self._list)
         # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
@@ -238,22 +240,22 @@ class CustomPopUpBase(Frame):
     Base for my own PopUpDialogs, as the one from Asciimatics isn't sufficient for my needs.
     This base leaves the definiton of Layouts and adding of Widgets to the child classes.
     """
-    def __init__(self, screen : Screen, title : str):
-        width = screen.width * 2 // 3   # 2 thirds of the screen's width
-        height = screen.height * 3 // 5 # 3 fifths of the screen's height
+    def __init__(self, screen : Screen, title : str, width : int, height : int):
         # Initialize Frame
         super().__init__(
             screen, height, width, has_shadow=True, is_modal=True, has_border=True, title=title, can_scroll=False,
         )
         # TODO: Currently theme is passable as an argument
         # Perhaps define a separate theme for PopUps
-        self.set_theme("warning")
+        self.set_theme("default")
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
         if isinstance(event, KeyboardEvent):
             if event.key_code in [ord("q"), ord("Q")]:
                 self._close()
+
+        return super().process_event(event)
 
     def _close(self):
         """Exit out of popup."""
@@ -288,16 +290,40 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
     """
     # TODO: Implement a check that makes sure albums aren't being added twice
     # TODO: Implement a mechanism that creates and checks unique release IDs
-    def __init__(self, screen : Screen):
+    def __init__(self, screen : Screen, width : int, height : int):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist manually"
+            screen, title="Add an album to the bucketlist manually", width=width, height=height
         )
 
         # TODO: Add Widgets for AddToBucketListManuallyPopUp
+        layout1 : Layout = Layout(columns=[1])
+        self.add_layout(layout1)
+        layout1.add_widget(TextBox(label="Artist(s):", height=3, as_string=True, line_wrap=True))
+        layout1.add_widget(TextBox(label="Release Title:", height=3, as_string=True, line_wrap=True))
+        layout1.add_widget(Text(label="Year:", validator=check_if_valid_year))
+        layout1.add_widget(Text(label="Genre(s):"))
+        layout1.add_widget(Divider(draw_line=False))
+
+        layout2 : Layout = Layout(columns=[1, 1])
+        self.add_layout(layout2)
+        layout2.add_widget(Button(text="Add", on_click=self.add_to_bucket_list), column=0)
+        layout2.add_widget(Button(text="Cancel", on_click=self._close), column=1)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+    # TODO: Remove this, perhaps replace with a "global" function somewhere down below
+    def add_to_bucket_list(self):
+        # TODO: Code to add the entry to the bucketlist
+        self._close()
+    
+    def process_event(self, event):
+        """
+        Process the events in this PopUp.
+        Necessary for the Widgets to work.
+        """
+        return super().process_event(event)
 
 class AddToListenedListPopUp(CustomPopUpBase):
     """
@@ -354,6 +380,12 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
         # "Initialize" layouts and locations of widgets
         self.fix()
 
+def check_if_valid_year(value : str):
+    if len(value) <= 4 and value.isnumeric():
+        return True
+    else:
+        return False
+
 def get_token() -> str:
     """Reads and returns the Discogs API personal access token from the specified file."""
     return open("token.txt", "r").read()
@@ -365,6 +397,20 @@ def exit_application(text : str):
 def switch_to_tab(tab_name : str):
     """Switch to the specified tab (Scene)."""
     raise NextScene(tab_name)
+
+def init_data():
+    pass
+
+def generate_random_album_id():
+    random_id : str = "".join(random.choices((string.ascii_lowercase + string.ascii_uppercase + string.digits), k=5))
+    existing_ids : list[str] = []
+    for index, entry in enumerate(test_data):
+        existing_ids.append(entry[1])
+    
+    while random_id in existing_ids:
+        random_id = "".join(random.choices((string.ascii_lowercase + string.ascii_uppercase + string.digits), k=5))
+    
+    return random_id
 
 def enter(screen : Screen, scene : Scene):
     """Entrypoint for the main loop of the program."""
