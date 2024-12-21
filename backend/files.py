@@ -5,7 +5,7 @@ from backend.models import Album, BucketAlbum, ListenedAlbum
 
 MM_PATH : str = os.path.expanduser('~') + "/.music-manager"
 BUCKET_PATH : str = MM_PATH + "/bucketlist.json"
-LISTENED_PATH : str = MM_PATH + "/albums.json"
+LISTENED_PATH : str = MM_PATH + "/listenedlist.json"
 
 type BucketList = list[BucketAlbum]
 type ListenedList = list[ListenedAlbum]
@@ -69,12 +69,29 @@ class FileWriter:
                 a.thoughts = new_thoughts
                 break
 
-    def remove_from_list(self, list_to_delete_from : list, release_id : int) -> None:
+    def remove_from_list(self, which_list : str, release_id : int) -> None:
         """Remove a release from the specified list if it can be found in that list."""
+        list_to_delete_from = []
+        if which_list == "bucket":
+            list_to_delete_from = self.bucket_list
+        elif which_list == "listened":
+            list_to_delete_from = self.listened_list
         for i in range(len(list_to_delete_from)):
             if list_to_delete_from[i].release_id == release_id:
                 list_to_delete_from.pop(i)
                 break
+
+    def return_list_as_options_tuple(self, which_list : str) -> list:
+        """
+        Return one of the lists in the following formats:
+        [([YEAR, ARTISTS, TITLE, GENRES], RELEASE_ID), ([YEAR, ARTISTS, TITLE, GENRES], RELEASE_ID)]
+        [([YEAR, ARTISTS, TITLE, GENRES, RATING, THOUGHTS], RELEASE_ID), ([YEAR, ARTISTS, TITLE, GENRES, RATING, THOUGHTS], RELEASE_ID)]
+        This format is needed for the options parameter in Asciimatics.
+        """
+        if which_list == "bucket":
+            return [album.return_self_as_tuple() for album in self.bucket_list]
+        elif which_list == "listened":
+            return [album.return_self_as_tuple() for album in self.listened_list]
 
     # TODO: Find a solution that doesn't require using an extra utility variable
     # for checking which list to use, because this isn't ideal
