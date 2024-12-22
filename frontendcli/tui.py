@@ -13,6 +13,11 @@ from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import Event, KeyboardEvent
 from asciimatics.exceptions import NextScene, StopApplication
 
+# Initialize helper objects to be used in this script
+b_filehelper = FileHelper(list_path="bucketlist.json")
+l_filehelper = FileHelper(list_path="listenedlist.json")
+discogs_helper = DiscogsHelper(open("token.txt", "r").read())
+
 THEMES["music-manager"] = {
     #                   FOREGROUND                          ATTRIBUTE           BACKGROUND
     "background": (Screen.COLOUR_WHITE,                 Screen.A_NORMAL,    Screen.COLOUR_BLACK),
@@ -98,7 +103,7 @@ class CustomTabBase(Frame):
         """Deletes an album from the specified list."""
         self._file_helper.remove_entry_from_list(release_id)
 
-    def reload_bucket_list(self):
+    def reload_list(self):
         """The updated list is loaded into this Tab's list again."""
         self._list.options = self._file_helper.return_list_as_tuples()
 
@@ -130,7 +135,7 @@ class CustomTabBase(Frame):
             # Delete selected entry from list
             elif event.key_code in [ord("x"), ord("X")] and len(self._list.options) > 0:
                 self.delete_release_from_list(self._list.value)
-                self.reload_bucket_list()
+                self.reload_list()
             # Exit the program
             elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
                 exit_application("Music Manager stopped.")
@@ -179,19 +184,21 @@ class BucketListFrame(CustomTabBase):
             # AddToBucketListDiscogsPopUp
             elif event.key_code in [ord("d"), ord("D")]:
                 self._scene.add_effect(AddToBucketListDiscogsPopUp(
-                    self._screen
+                    self._screen, b_filehelper
                 ))
             # AddToBucketListManuallyPopUp
             elif event.key_code in [ord("m"), ord("M")]:
                 self._scene.add_effect(AddToBucketListManuallyPopUp(
-                    self._screen
+                    self._screen, b_filehelper
                 ))
             # AddToListenedListPopUp
             elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
+                album = self._file_helper.list[self.find_index_of_entry(self._list.value)]
                 self._scene.add_effect(AddToListenedListPopUp(
-                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)]
+                    self._screen, album, b_filehelper, l_filehelper
                 ))
 
+        self.reload_list()
         # Other processing is handled in parent class
         return super().process_event(event)
 
@@ -240,8 +247,9 @@ class ListenedListFrame(CustomTabBase):
             # EditListenedRatingAndThoughtsPopUp
             elif event.key_code in [ord("e"), ord("E")] and amount_of_albums > 0:
                 self._scene.add_effect(EditListenedRatingAndThoughtsPopUp(
-                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)]
+                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)], file_helper=l_filehelper
                 ))
+                self.reload_list()
 
         # Other processing is handled in parent class
         return super().process_event(event)
@@ -255,7 +263,7 @@ class CustomPopUpBase(Frame):
     def __init__(self, screen : Screen, title : str, width : int, height : int):
         # Initialize Frame
         super().__init__(
-            screen, height, width, has_shadow=True, is_modal=True, has_border=True, title=title, can_scroll=False,
+            screen, height, width, has_shadow=True, is_modal=False, has_border=True, title=title, can_scroll=False
         )
         # TODO: Currently theme is passable as an argument
         # Perhaps define a separate theme for PopUps
@@ -271,7 +279,7 @@ class CustomPopUpBase(Frame):
         return super().process_event(event)
 
     def _close(self):
-        """Exit out of popup."""
+        """Exit out of this PopUp."""
         self._scene.remove_effect(self)
 
 class AddToBucketListDiscogsPopUp(CustomPopUpBase):
@@ -284,16 +292,71 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
     """
 
     # TODO: Implement a check that makes sure albums aren't being added twice
-    def __init__(self, screen : Screen):
+    def __init__(self, screen : Screen, file_helper : FileHelper):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist using Discogs", width=30, height=12
+            screen, title="Add an album to the bucketlist using Discogs", width=screen.width * 4 // 5, height=12
         )
+        self._file_helper = file_helper
 
-        # TODO: Add Widgets for AddToBucketListDiscogsPopUp
+        divider = Divider(draw_line=False, height=1)
+
+        # Create Layouts and Widgets
+        layout1 : Layout = Layout(columns=[screen.width * 4 // 5 - 14, 18])
+        self.add_layout(layout1)
+        layout1.add_widget(divider, 0)
+        layout1.add_widget(divider, 1)
+        self._text = layout1.add_widget(Text(), 0)
+        layout1.add_widget(Button("Search", on_click=self._search), 1)
+
+        layout2 : Layout = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout2)
+        layout2.add_widget(divider)
+        self._result_label = layout2.add_widget(Label("", height=1))
+        layout2.add_widget(divider)
+
+        layout3 : Layout = Layout(columns=[1, 1, 1, 1])
+        self.add_layout(layout3)
+        self._add_button = layout3.add_widget(Button("Add", on_click=self._add_to_bucket_list), 1)
+        self._add_button.disabled = True
+        layout3.add_widget(Button("Redo", on_click=self._redo_search), 2)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+    def _add_to_bucket_list(self):
+        """Add the found album to the bucketlist."""
+        if self._result != None:
+            self._file_helper.add_new_entry_to_list(self._result)
+            self._close()
+    
+    def _redo_search(self, message=""):
+        """Reset the Widgets in the PopUp."""
+        self._result = None
+        self._text.value = ""
+        self._add_button.disabled = True
+        self._result_label.text = message
+        # Switch focus back to Text element
+        self.switch_focus(layout=self._layouts[0], column=0, widget=1)
+
+    def _search(self):
+        """Search for an album on Discogs using the user's entered query and present the results."""
+        # No user query
+        if self._text.value == "":
+            self._redo_search(message="Must enter a search term")
+        # User query given
+        else:
+            self._result = discogs_helper.search_one(user_query=self._text.value)
+            # No result found
+            if self._result == None:
+                self._redo_search(message="No result found")
+            # Result found
+            else:
+                self._result_label.text = "{} - {} ({}) [{}]".format(
+                    self._result.artists, self._result.title, self._result.year ,self._result.genres
+                )
+                self._add_button.disabled = False
+                self.switch_focus(layout=self._layouts[2], column=1, widget=0)
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
@@ -309,25 +372,26 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
 
     # TODO: Implement a check that makes sure albums aren't being added twice
     # TODO: Implement a mechanism that creates and checks unique release IDs
-    def __init__(self, screen : Screen):
+    def __init__(self, screen : Screen, file_helper : FileHelper):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist manually", width=screen.width * 2 // 3, height=12
+            screen, title="Add an album to the bucketlist manually", width=screen.width * 4 // 5, height=13
         )
+        self._file_helper = file_helper
 
-        # TODO: Add Widgets for AddToBucketListManuallyPopUp
         layout1 : Layout = Layout(columns=[1])
         self.add_layout(layout1)
+        layout1.add_widget(Divider(draw_line=False, height=1))
         layout1.add_widget(TextBox(label="Artist(s):", height=3, as_string=True, line_wrap=True))
         layout1.add_widget(TextBox(label="Release Title:", height=3, as_string=True, line_wrap=True))
         layout1.add_widget(Text(label="Year:", validator=check_if_valid_year))
         layout1.add_widget(Text(label="Genre(s):"))
         layout1.add_widget(Divider(draw_line=False))
 
-        layout2 : Layout = Layout(columns=[1, 1])
+        layout2 : Layout = Layout(columns=[1, 1, 1, 1])
         self.add_layout(layout2)
-        layout2.add_widget(Button(text="Add", on_click=self.add_to_bucket_list), column=0)
-        layout2.add_widget(Button(text="Cancel", on_click=self._close), column=1)
+        layout2.add_widget(Button(text="Add", on_click=self.add_to_bucket_list), 1)
+        layout2.add_widget(Button(text="Cancel", on_click=self._close), 2)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
@@ -352,13 +416,16 @@ class AddToListenedListPopUp(CustomPopUpBase):
     """
 
     # TODO: Implement a check that makes sure albums aren't being added twice
-    def __init__(self, screen : Screen, album : BucketAlbum):
+    def __init__(self, screen : Screen, album : BucketAlbum, b_filehelper : FileHelper, l_filehelper : FileHelper):
+        self._b_filehelper = b_filehelper
+        self._l_filehelper = l_filehelper
+    
         text = "Add '{}' to list of listened albums"
         self._bucket_album : BucketAlbum = album
         album_title = self._bucket_album.title
 
         # Shorten album title incase it's too long
-        popup_width = screen.width * 2 // 3
+        popup_width = screen.width * 4 // 5
         max_album_length = popup_width - len(text) - 2  # minus 2 to account for the curly braces
         if len(album_title) > max_album_length:
             album_title = album_title[:max_album_length - 3] + "..."
@@ -367,7 +434,7 @@ class AddToListenedListPopUp(CustomPopUpBase):
 
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title=text, width=30, height=12
+            screen, title=text, width=popup_width, height=13
         )
 
         # TODO: Add Widgets for AddToListenedListPopUp
@@ -387,11 +454,13 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
     A "Apply change" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    def __init__(self, screen : Screen, album : ListenedAlbum):
-        self._album : ListenedAlbum = album
-        text = "Edit rating and thoughts for '" + self._album.title + "'"
+    def __init__(self, screen : Screen, album : ListenedAlbum, file_helper : FileHelper):
+        self._file_helper = file_helper
+    
+        self._listened_album : ListenedAlbum = album
+        text = "Edit rating and thoughts for '" + self._listened_album.title + "'"
         # Shorten incase of long album title
-        popup_width = screen.width * 2 // 3 - 4 # 2 to account for single quotes
+        popup_width = screen.width * 4 // 5 - 4 # 2 to account for single quotes
         if len(text) > (popup_width):
             text = text[:popup_width - 4] + "...'"
     
@@ -416,10 +485,6 @@ def check_if_valid_year(value : str):
     else:
         return False
 
-def get_token() -> str:
-    """Reads and returns the Discogs API personal access token from the specified file."""
-    return open("token.txt", "r").read()
-
 def exit_application(text : str):
     """Exit the program with the given text message."""
     raise StopApplication(message=text)
@@ -427,11 +492,6 @@ def exit_application(text : str):
 def switch_to_tab(tab_name : str):
     """Switch to the specified Tab (Scene)."""
     raise NextScene(tab_name)
-
-# Initialize helper objects to be used in this script
-b_filehelper = FileHelper(list_path="bucketlist.json")
-l_filehelper = FileHelper(list_path="listenedlist.json")
-discogs_helper = DiscogsHelper(get_token())
 
 def enter(screen : Screen, scene : Scene):
     """Entrypoint for the main loop of the program."""
