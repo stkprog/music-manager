@@ -1,5 +1,5 @@
 from backend.discogs import DiscogsHelper
-from backend.files import FileWriter
+from backend.filehelper import FileHelper
 from backend.models import BucketAlbum, ListenedAlbum
 
 # import sys
@@ -76,7 +76,7 @@ THEMES["music-manager"] = {
 class CustomTabBase(Frame):
     """A base class for the two 'tabs' that the user switches to and from."""
     
-    def __init__(self, screen : Screen, mclistbox : MultiColumnListBox, which_list : str):
+    def __init__(self, screen : Screen, mclistbox : MultiColumnListBox, file_helper : FileHelper):
         super().__init__(
             screen,
             width=screen.width,
@@ -84,7 +84,7 @@ class CustomTabBase(Frame):
             has_border=False,
             can_scroll=False
         )
-        self._which_list = which_list
+        self._file_helper = file_helper
         self._list = mclistbox
         self.set_theme("music-manager")
 
@@ -96,11 +96,11 @@ class CustomTabBase(Frame):
 
     def delete_release_from_list(self, release_id : int):
         """Deletes an album from the specified list."""
-        file_writer.remove_from_list(self._which_list, release_id)
+        self._file_helper.remove_entry_from_list(release_id)
 
     def reload_bucket_list(self):
         """The updated list is loaded into this Tab's list again."""
-        self._list.options = file_writer.return_list_as_options_tuple(self._which_list)
+        self._list.options = self._file_helper.return_list_as_tuples()
 
     def generate_random_release_id(self):
         """Utility method for generating a random release_id for a manually added album."""
@@ -141,13 +141,12 @@ class CustomTabBase(Frame):
 class BucketListFrame(CustomTabBase):
     """The frame that contains the list of music that the user has yet to listen to."""
 
-    def __init__(self, screen : Screen):
+    def __init__(self, screen : Screen, file_helper : FileHelper):
         """Initialize this BucketListFrame."""
-        which_list="bucket"
         mclistbox = MultiColumnListBox(
             height=Widget.FILL_FRAME,
             columns=["<7", "<30%", "<40%", "<15%"],
-            options=file_writer.return_list_as_options_tuple(which_list),
+            options=file_helper.return_list_as_tuples(),
             titles=["Year", "Artists", "Title", "Genres"],
             name="BucketList",
             add_scroll_bar=True
@@ -155,7 +154,7 @@ class BucketListFrame(CustomTabBase):
         super().__init__(
             screen=screen,
             mclistbox=mclistbox,
-            which_list=which_list
+            file_helper=file_helper
         )
         
         layout1 : Layout = Layout(columns=[1], fill_frame=True)
@@ -190,7 +189,7 @@ class BucketListFrame(CustomTabBase):
             # AddToListenedListPopUp
             elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
                 self._scene.add_effect(AddToListenedListPopUp(
-                    self._screen, album=file_writer.bucket_list[self.find_index_of_entry(self._list.value)]
+                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)]
                 ))
 
         # Other processing is handled in parent class
@@ -203,13 +202,12 @@ class ListenedListFrame(CustomTabBase):
     a "rating" field and a "thoughts" field.
     """
 
-    def __init__(self, screen : Screen):
+    def __init__(self, screen : Screen, file_helper : FileHelper):
         """Initialize this ListenedListFrame."""
-        which_list = "listened"
         mclistbox = MultiColumnListBox(
             height=Widget.FILL_FRAME,
             columns=["<7", "<30%", "<37%", "<13%", "^12", "^8"],
-            options=file_writer.return_list_as_options_tuple(which_list),
+            options=file_helper.return_list_as_tuples(),
             titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
             name="ListenedList",
             add_scroll_bar=True
@@ -217,7 +215,7 @@ class ListenedListFrame(CustomTabBase):
         super().__init__(
             screen=screen,
             mclistbox=mclistbox,
-            which_list=which_list
+            file_helper=file_helper
         )
 
         layout1 : Layout = Layout(columns=[1], fill_frame=False)
@@ -242,7 +240,7 @@ class ListenedListFrame(CustomTabBase):
             # EditListenedRatingAndThoughtsPopUp
             elif event.key_code in [ord("e"), ord("E")] and amount_of_albums > 0:
                 self._scene.add_effect(EditListenedRatingAndThoughtsPopUp(
-                    self._screen, album=file_writer.listened_list[self.find_index_of_entry(self._list.value)]
+                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)]
                 ))
 
         # Other processing is handled in parent class
@@ -431,14 +429,18 @@ def switch_to_tab(tab_name : str):
     raise NextScene(tab_name)
 
 # Initialize helper objects to be used in this script
-file_writer = FileWriter()
-file_writer.initialize()
+b_filehelper = FileHelper(list_path="bucketlist.json")
+l_filehelper = FileHelper(list_path="listenedlist.json")
 discogs_helper = DiscogsHelper(get_token())
 
 def enter(screen : Screen, scene : Scene):
     """Entrypoint for the main loop of the program."""
     scenes = [
-        Scene([ListenedListFrame(screen)], duration=-1, name="ListenedListTab"),
-        Scene([BucketListFrame(screen)], duration=-1, name="BucketListTab")
+        Scene(
+            [BucketListFrame(screen, file_helper=b_filehelper)], duration=-1, name="BucketListTab"
+        ),
+        Scene(
+            [ListenedListFrame(screen, file_helper=l_filehelper)], duration=-1, name="ListenedListTab"
+        )
     ]
     screen.play(scenes=scenes, stop_on_resize=True, start_scene=scene)
