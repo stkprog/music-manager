@@ -18,7 +18,7 @@ class Album():
             indent=4
         )
     
-    def return_self_as_tuple(self):
+    def return_self_as_tuple(self) -> tuple:
         """
         Returns this album as a tuple in the following format:
         ([YEAR, ARTISTS, TITLE, GENRES], RELEASE_ID)
@@ -37,7 +37,7 @@ class ListenedAlbum(Album):
         self.rating = rating
         self.thoughts = thoughts
     
-    def return_self_as_tuple(self):
+    def return_self_as_tuple(self) -> tuple:
         """
         Returns this album as a tuple in the following format:
         ([YEAR, ARTISTS, TITLE, GENRES, RATING, THOUGHTS], RELEASE_ID)

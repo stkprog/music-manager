@@ -93,17 +93,17 @@ class CustomTabBase(Frame):
         self._list = mclistbox
         self.set_theme("music-manager")
 
-    def find_index_of_entry(self, release_id : int):
+    def find_index_of_entry(self, release_id : int) -> int:
         """Takes a release_id and searches for the corresponding album in this Tab's list."""
         for index, entry in enumerate(self._list.options):
             if entry[1] == release_id:
                 return index
 
-    def delete_release_from_list(self, release_id : int):
+    def delete_release_from_list(self, release_id : int) -> None:
         """Deletes an album from the specified list."""
         self._file_helper.remove_entry_from_list(release_id)
 
-    def reload_list(self):
+    def reload_list(self) -> None:
         """The updated list is loaded into this Tab's list again."""
         self._list.options = self._file_helper.return_list_as_tuples()
     
@@ -265,7 +265,7 @@ class CustomPopUpBase(Frame):
 
         return super().process_event(event)
 
-    def _close(self):
+    def _close(self) -> None:
         """Exit out of this PopUp."""
         self._scene.remove_effect(self)
 
@@ -311,19 +311,20 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         # "Initialize" layouts and locations of widgets
         self.fix()
 
-    def _add_to_bucket_list(self):
+    def _add_to_bucket_list(self) -> None:
         """Add the found album to the bucketlist."""
         if self._result != None and not self._new_entry_already_exists(self._result):
             self._file_helper.add_new_entry_to_list(self._result)
             self._close()
     
-    def _new_entry_already_exists(self, new_entry : BucketAlbum):
+    def _new_entry_already_exists(self, new_entry : BucketAlbum) -> bool:
+        """Checks if the new entry is already in the list."""
         for entry in self._file_helper.list:
             if new_entry.release_id == entry.release_id:
                 return True
         return False
 
-    def _redo_search(self, message=""):
+    def _redo_search(self, message="") -> None:
         """Reset the Widgets in the PopUp."""
         self._result = None
         self._text.value = ""
@@ -332,7 +333,7 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         # Switch focus back to Text element
         self.switch_focus(layout=self._layouts[0], column=0, widget=1)
 
-    def _search(self):
+    def _search(self) -> None:
         """Search for an album on Discogs using the user's entered query and present the results."""
         # No user query
         if self._text.value == "":
@@ -404,7 +405,7 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
         # "Initialize" layouts and locations of widgets
         self.fix()
 
-    def _add_to_bucket_list(self):
+    def _add_to_bucket_list(self) -> None:
         """Uses the data entered by the user to add a new entry to the bucketlist."""
         # Reset errors list
         self._errors = []
@@ -422,7 +423,7 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
         else:
             self._error_label.text = ", ".join(self._errors).capitalize() + "."
     
-    def _generate_random_release_id(self):
+    def _generate_random_release_id(self) -> int:
         """Utility method for generating a random release_id for a manually added album."""
         # Generate a random long integer
         random_id : int = int("".join(random.choices((string.digits), k=12)))
@@ -435,7 +436,7 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
         
         return random_id
 
-    def _all_inputs_valid(self):
+    def _all_inputs_valid(self) -> bool:
         """
         Checks if all the user inputs are valid.
         Adds errors for UI output.
@@ -451,14 +452,14 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
         
         return self._input_artists.is_valid and self._input_title.is_valid and self._input_year.is_valid and self._input_genres.is_valid
 
-    def _check_if_valid_year(self, value : str):
+    def _check_if_valid_year(self, value : str) -> bool:
         """Ensures that a year entered by the user is 4 digits or less and consists only of digits."""
         if len(value) <= 4 and value.isnumeric():
             return True
         else:
             return False
     
-    def _check_if_string_not_none(self, value : str):
+    def _check_if_string_not_none(self, value : str) -> bool:
         """Ensures that a given string is not None or empty."""
         return value != None and value != ""
 
@@ -537,15 +538,15 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
         """Do the key handling for this Frame."""
         return super().process_event(event)
 
-def exit_application(text : str):
+def exit_application(text : str) -> None:
     """Exit the program with the given text message."""
     raise StopApplication(message=text)
 
-def switch_to_tab(tab_name : str):
+def switch_to_tab(tab_name : str) -> None:
     """Switch to the specified Tab (Scene)."""
     raise NextScene(tab_name)
 
-def enter(screen : Screen, scene : Scene):
+def enter(screen : Screen, scene : Scene) -> None:
     """Entrypoint for the main loop of the program."""
     scenes = [
         Scene(

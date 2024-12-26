@@ -49,7 +49,7 @@ class DiscogsHelper:
 
         return BucketAlbum(main_release.id, artists, main_release.title, genres, year)
 
-    def process_artist(self, artist : str):
+    def process_artist(self, artist : str) -> str:
         """
         If an artist name is used by several artists, Discogs appends a
         number at the end, e.g. Queen (2).
