@@ -1,6 +1,6 @@
 from backend.discogs import DiscogsHelper
 from backend.filehelper import FileHelper
-from backend.models import BucketAlbum, ListenedAlbum
+from backend.models import Album, BucketAlbum, ListenedAlbum
 
 # import sys
 import string
@@ -8,7 +8,7 @@ import random
 
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
-from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label, PopUpDialog, TextBox, Text, Divider
+from asciimatics.widgets import Frame, Layout, Button, MultiColumnListBox, Widget, Label, PopUpDialog, TextBox, Text, Divider, DropdownList
 from asciimatics.widgets.utilities import THEMES
 from asciimatics.event import Event, KeyboardEvent
 from asciimatics.exceptions import NextScene, StopApplication
@@ -24,7 +24,7 @@ THEMES["music-manager"] = {
     "shadow": (Screen.COLOUR_BLACK,                     None,               Screen.COLOUR_BLACK),
     "disabled": (Screen.COLOUR_BLACK,                   Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "invalid": (Screen.COLOUR_YELLOW,                   Screen.A_BOLD,      Screen.COLOUR_RED),
-    "label": (Screen.COLOUR_BLUE,                       Screen.A_BOLD,      Screen.COLOUR_BLACK),
+    "label": (Screen.COLOUR_CYAN,                       Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "borders": (Screen.COLOUR_WHITE,                    Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "scroll": (Screen.COLOUR_WHITE,                     Screen.A_NORMAL,    Screen.COLOUR_BLACK),
     "title": (Screen.COLOUR_CYAN,                       Screen.A_BOLD,      Screen.COLOUR_BLACK),
@@ -35,7 +35,7 @@ THEMES["music-manager"] = {
     "button": (Screen.COLOUR_WHITE,                     Screen.A_NORMAL,    Screen.COLOUR_BLUE),
     "focus_button": (Screen.COLOUR_WHITE,               Screen.A_BOLD,      Screen.COLOUR_CYAN),
     "control": (Screen.COLOUR_CYAN,                     Screen.A_NORMAL,    Screen.COLOUR_BLACK),
-    "selected_control": (Screen.COLOUR_GREEN,           Screen.A_BOLD,      Screen.COLOUR_BLUE),
+    "selected_control": (Screen.COLOUR_CYAN,            Screen.A_BOLD,      Screen.COLOUR_BLUE),
     "focus_control": (Screen.COLOUR_CYAN,               Screen.A_NORMAL,    Screen.COLOUR_BLACK),
     "selected_focus_control": (Screen.COLOUR_CYAN,      Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "field": (Screen.COLOUR_WHITE,                      Screen.A_NORMAL,    Screen.COLOUR_BLACK),
@@ -43,6 +43,7 @@ THEMES["music-manager"] = {
     "focus_field": (Screen.COLOUR_WHITE,                Screen.A_NORMAL,    Screen.COLOUR_BLACK),
     "selected_focus_field": (Screen.COLOUR_WHITE,       Screen.A_BOLD,      Screen.COLOUR_BLUE),
 }
+THEMES["default"]["label"] = (Screen.COLOUR_CYAN, Screen.A_BOLD, Screen.COLOUR_BLUE)
 
 # Just for reference
 
@@ -99,18 +100,22 @@ class CustomTabBase(Frame):
             if entry[1] == release_id:
                 return index
 
-    def delete_release_from_list(self, release_id : int) -> None:
+    def _find_current_entry(self) -> Album:
+        """Returns the current entry selected in the MultiColumnListBox."""
+        return self._file_helper.list[self.find_index_of_entry(self._list.value)]
+
+    def _delete_release_from_list(self, release_id : int) -> None:
         """Deletes an album from the specified list."""
         self._file_helper.remove_entry_from_list(release_id)
 
-    def reload_list(self) -> None:
+    def _reload_list(self) -> None:
         """The updated list is loaded into this Tab's list again."""
         self._list.options = self._file_helper.return_list_as_tuples()
     
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
         if isinstance(event, KeyboardEvent):
-
+            
             # Show PopUpDialog with credits
             if event.key_code in [ord("c"), ord("C")]:
                 self._scene.add_effect(PopUpDialog(
@@ -121,8 +126,9 @@ class CustomTabBase(Frame):
                 ))
             # Delete selected entry from list
             elif event.key_code in [ord("x"), ord("X")] and len(self._list.options) > 0:
-                self.delete_release_from_list(self._list.value)
-                self.reload_list()
+                self._delete_release_from_list(self._list.value)
+                self._file_helper.write_to_disk()
+                self._reload_list()
             # Exit the program
             elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
                 exit_application("Music Manager stopped.")
@@ -152,10 +158,11 @@ class BucketListFrame(CustomTabBase):
         layout1 : Layout = Layout(columns=[1], fill_frame=True)
         self.add_layout(layout=layout1)
         layout1.add_widget(self._list)
-        # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
-        layout1.add_widget(
-            Label(label="Q=exit   1=switch to listened list   L=add to listened list   D=add using discogs   M=add manually   X=remove selected   C=credits", align="<", height=1)
-        )
+        layout1.add_widget(Label(
+            label="Q=exit   1=switch to listened list   L=add to listened list   D=add using discogs   M=add manually   X=remove selected   C=credits",
+            align="<",
+            height=1
+        ))
 
         # "Initialize" layouts and locations of widgets
         self.fix()
@@ -171,21 +178,20 @@ class BucketListFrame(CustomTabBase):
             # AddToBucketListDiscogsPopUp
             elif event.key_code in [ord("d"), ord("D")]:
                 self._scene.add_effect(AddToBucketListDiscogsPopUp(
-                    self._screen, b_filehelper
+                    self._screen, b_filehelper, parent_frame=self
                 ))
             # AddToBucketListManuallyPopUp
             elif event.key_code in [ord("m"), ord("M")]:
                 self._scene.add_effect(AddToBucketListManuallyPopUp(
-                    self._screen, b_filehelper
+                    self._screen, b_filehelper, self
                 ))
             # AddToListenedListPopUp
             elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
-                album = self._file_helper.list[self.find_index_of_entry(self._list.value)]
+                album = self._find_current_entry()
                 self._scene.add_effect(AddToListenedListPopUp(
-                    self._screen, album, b_filehelper, l_filehelper
+                    self._screen, album, b_filehelper, l_filehelper, self
                 ))
 
-        self.reload_list()
         # Other processing is handled in parent class
         return super().process_event(event)
 
@@ -215,10 +221,10 @@ class ListenedListFrame(CustomTabBase):
         layout1 : Layout = Layout(columns=[1], fill_frame=False)
         self.add_layout(layout1)
         layout1.add_widget(self._list)
-        # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
-        layout1.add_widget(
-            Label(label="Q=exit   2=switch to bucketlist   E=edit rating & thoughts   X=remove selected   C=credits", align="<", height=1)
-        )
+        layout1.add_widget(Label(
+            label="Q=exit   2=switch to bucketlist   E=edit rating & thoughts   T=view thoughts   X=remove selected   C=credits",
+            align="<",height=1
+        ))
 
         # "Initialize" layouts and locations of widgets
         self.fix()
@@ -234,9 +240,15 @@ class ListenedListFrame(CustomTabBase):
             # EditListenedRatingAndThoughtsPopUp
             elif event.key_code in [ord("e"), ord("E")] and amount_of_albums > 0:
                 self._scene.add_effect(EditListenedRatingAndThoughtsPopUp(
-                    self._screen, album=self._file_helper.list[self.find_index_of_entry(self._list.value)], file_helper=l_filehelper
+                    self._screen, album=self._find_current_entry(), file_helper=l_filehelper, parent_frame=self
                 ))
-                self.reload_list()
+            elif event.key_code in [ord("t"), ord("E")] and amount_of_albums > 0:
+                self._scene.add_effect(PopUpDialog(
+                    self._screen,
+                    buttons=["Close"],
+                    has_shadow=True,
+                    text="Thoughts on '" + self._find_current_entry().title + "'\n\n" + self._find_current_entry().thoughts,
+                ))
 
         # Other processing is handled in parent class
         return super().process_event(event)
@@ -247,13 +259,14 @@ class CustomPopUpBase(Frame):
     This base leaves the definiton of Layouts and adding of Widgets to the child classes.
     """
 
-    def __init__(self, screen : Screen, title : str, width : int, height : int):
+    def __init__(self, screen : Screen, title : str, width : int, height : int, parent_frame : CustomTabBase):
         # Initialize Frame
         super().__init__(
             screen, height, width, has_shadow=True, is_modal=False, has_border=True, title=title, can_scroll=False
         )
         # TODO: Currently theme is passable as an argument
         # Perhaps define a separate theme for PopUps
+        self._parent_frame = parent_frame
         self.set_theme("default")
 
     def process_event(self, event):
@@ -267,6 +280,7 @@ class CustomPopUpBase(Frame):
 
     def _close(self) -> None:
         """Exit out of this PopUp."""
+        self._parent_frame._reload_list()
         self._scene.remove_effect(self)
 
 class AddToBucketListDiscogsPopUp(CustomPopUpBase):
@@ -278,10 +292,14 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
     A "Add" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    def __init__(self, screen : Screen, file_helper : FileHelper):
+    def __init__(self, screen : Screen, file_helper : FileHelper, parent_frame : BucketListFrame):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist using Discogs", width=screen.width * 4 // 5, height=8
+            screen,
+            title="Add an album to the bucketlist using Discogs",
+            width=screen.width * 4 // 5,
+            height=8,
+            parent_frame=parent_frame
         )
         self._file_helper = file_helper
 
@@ -315,6 +333,7 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         """Add the found album to the bucketlist."""
         if self._result != None and not self._new_entry_already_exists(self._result):
             self._file_helper.add_new_entry_to_list(self._result)
+            self._file_helper.write_to_disk()
             self._close()
     
     def _new_entry_already_exists(self, new_entry : BucketAlbum) -> bool:
@@ -361,7 +380,7 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
             )
             self._add_button.disabled = False
             # Focus to "Add" button
-            self.switch_focus(layout=self._layouts[2], column=1, widget=0)
+            self.switch_focus(layout=self._layouts[2], column=0, widget=0)
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
@@ -375,26 +394,32 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
     A "Add" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    def __init__(self, screen : Screen, file_helper : FileHelper):
+    def __init__(self, screen : Screen, file_helper : FileHelper, parent_frame : BucketListFrame):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist manually", width=screen.width * 4 // 5, height=11
+            screen,
+            title="Add an album to the bucketlist manually",
+            width=screen.width * 4 // 5,
+            height=11,
+            parent_frame=parent_frame
         )
         self._file_helper = file_helper
 
+        divider = Divider(draw_line=False, height=1)
+
         layout1 : Layout = Layout(columns=[1], fill_frame=True)
         self.add_layout(layout1)
-        layout1.add_widget(Divider(draw_line=False, height=1))
+        layout1.add_widget(divider)
         self._input_artists = layout1.add_widget(Text(label="Artist(s):", validator=self._check_if_string_not_none))
         self._input_title = layout1.add_widget(Text(label="Release Title:", validator=self._check_if_string_not_none))
         self._input_year = layout1.add_widget(Text(label="Year:", validator=self._check_if_valid_year))
         self._input_genres = layout1.add_widget(Text(label="Genre(s):", validator=self._check_if_string_not_none))
-        layout1.add_widget(Divider(draw_line=False))
+        layout1.add_widget(divider)
 
         layout2 : Layout = Layout(columns=[1])
         self.add_layout(layout2)
         self._error_label = layout2.add_widget(Label("", height=1))
-        layout2.add_widget(Divider(draw_line=False, height=1))
+        layout2.add_widget(divider)
         self._errors = []
 
         layout3 : Layout = Layout(columns=[1, 1, 1, 1])
@@ -419,6 +444,7 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
                 genres=self._input_genres.value
             )
             self._file_helper.add_new_entry_to_list(new_bucket)
+            self._file_helper.write_to_disk()
             self._close()
         else:
             self._error_label.text = ", ".join(self._errors).capitalize() + "."
@@ -476,7 +502,9 @@ class AddToListenedListPopUp(CustomPopUpBase):
     A "Add to listened albums" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    def __init__(self, screen : Screen, album : BucketAlbum, b_filehelper : FileHelper, l_filehelper : FileHelper):
+    def __init__(
+            self, screen : Screen, album : BucketAlbum, b_filehelper : FileHelper, l_filehelper : FileHelper, parent_frame : BucketListFrame
+        ):
         self._b_filehelper = b_filehelper
         self._l_filehelper = l_filehelper
     
@@ -494,13 +522,71 @@ class AddToListenedListPopUp(CustomPopUpBase):
 
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title=text, width=popup_width, height=13
+            screen, title=text, width=popup_width, height=15, parent_frame=parent_frame
         )
 
-        # TODO: Add Widgets for AddToListenedListPopUp
+        divider = Divider(draw_line=False, height=1)
+
+        layout1 : Layout = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout1)
+        layout1.add_widget(divider)
+        self._album_artists = layout1.add_widget(Text(label="Artist(s):"))
+        self._album_artists.disabled = True
+        self._album_artists.value = self._bucket_album.artists
+        self._album_title = layout1.add_widget(Text(label="Release Title:"))
+        self._album_title.disabled = True
+        self._album_title.value = self._bucket_album.title
+        self._album_year = layout1.add_widget(Text(label="Year:"))
+        self._album_year.value = self._bucket_album.year
+        self._album_year.disabled = True
+        self._album_genres = layout1.add_widget(Text(label="Genre(s):"))
+        self._album_genres.value = self._bucket_album.genres
+        self._album_genres.disabled = True
+
+        layout1.add_widget(divider)
+        self._album_rating = layout1.add_widget(DropdownList(
+            # 1 to 10
+            options=tuple([str(i + 1), i + 1] for i in range(10)),
+            label="Rating",
+            fit=True
+        ))
+        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5,))
+
+        layout2 = Layout(columns=[1, 1])
+        self.add_layout(layout2)
+        layout2.add_widget(Button("Add", on_click=self._move_from_bucket_to_listened_list), 0)
+        layout2.add_widget(Button("Cancel", on_click=self._close), 1)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+    def _move_from_bucket_to_listened_list(self):
+        """Deletes the new entry from the bucketlist and adds it to the listened list."""
+        listened_album = ListenedAlbum(
+            self._bucket_album.release_id,
+            self._bucket_album.artists,
+            self._bucket_album.title,
+            self._bucket_album.genres,
+            self._bucket_album.year,
+            str(self._album_rating.value),
+            self._album_thoughts.value
+        )
+        self._b_filehelper.remove_entry_from_list(self._bucket_album.release_id)
+        self._b_filehelper.write_to_disk()
+        self._l_filehelper.add_new_entry_to_list(listened_album)
+        self._l_filehelper.write_to_disk()
+        self._close()
+
+    def _close(self) -> None:
+        """
+        Exit out of this PopUp.
+        Polymorphism to account for two parent frames.
+        """
+        """Exit out of this PopUp."""
+        self._parent_frame._reload_list()
+        # This is a bit unfortunate. Reloading ListenedListTab
+        self._screen._scenes[1].effects[0]._reload_list()
+        self._scene.remove_effect(self)
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
@@ -514,7 +600,7 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
     A "Apply change" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    def __init__(self, screen : Screen, album : ListenedAlbum, file_helper : FileHelper):
+    def __init__(self, screen : Screen, album : ListenedAlbum, file_helper : FileHelper, parent_frame : ListenedListFrame):
         self._file_helper = file_helper
     
         self._listened_album : ListenedAlbum = album
@@ -526,13 +612,59 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
     
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title=text, width=popup_width, height=12
+            screen, title=text, width=popup_width, height=15, parent_frame=parent_frame
         )
 
-        # TODO: Add Widgets for EditListenedRatingAndThoughtsPopUp
+        divider = Divider(draw_line=False, height=1)
+
+        layout1 : Layout = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout1)
+        layout1.add_widget(divider)
+        self._album_artists = layout1.add_widget(Text(label="Artist(s):"))
+        self._album_artists.disabled = True
+        self._album_artists.value = self._listened_album.artists
+        self._album_title = layout1.add_widget(Text(label="Release Title:"))
+        self._album_title.disabled = True
+        self._album_title.value = self._listened_album.title
+        self._album_year = layout1.add_widget(Text(label="Year:"))
+        self._album_year.value = self._listened_album.year
+        self._album_year.disabled = True
+        self._album_genres = layout1.add_widget(Text(label="Genre(s):"))
+        self._album_genres.value = self._listened_album.genres
+        self._album_genres.disabled = True
+        
+        layout1.add_widget(divider)
+        self._album_rating = layout1.add_widget(DropdownList(
+            # 1 to 10
+            options=tuple([str(i + 1), i + 1] for i in range(10)),
+            label="Rating",
+            fit=True
+        ))
+        self._album_rating.value = int(self._listened_album.rating)
+        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5,))
+        self._album_thoughts.value = self._listened_album.thoughts
+
+        layout2 = Layout(columns=[1, 1])
+        self.add_layout(layout2)
+        layout2.add_widget(Button("Change", on_click=self._change_rating_and_thoughts), 0)
+        layout2.add_widget(Button("Cancel", on_click=self._close), 1)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+    def _change_rating_and_thoughts(self) -> None:
+        listened_album = ListenedAlbum(
+            self._listened_album.release_id,
+            self._listened_album.artists,
+            self._listened_album.title,
+            self._listened_album.genres,
+            self._listened_album.year,
+            str(self._album_rating.value),
+            self._album_thoughts.value
+        )
+        self._file_helper.replace_entry_in_list(new_entry=listened_album)
+        self._file_helper.write_to_disk()
+        self._close()
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
