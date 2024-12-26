@@ -278,11 +278,10 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
     A "Add" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    # TODO: Implement a check that makes sure albums aren't being added twice
     def __init__(self, screen : Screen, file_helper : FileHelper):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist using Discogs", width=screen.width * 4 // 5, height=12
+            screen, title="Add an album to the bucketlist using Discogs", width=screen.width * 4 // 5, height=8
         )
         self._file_helper = file_helper
 
@@ -302,21 +301,28 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         self._result_label = layout2.add_widget(Label("", height=1))
         layout2.add_widget(divider)
 
-        layout3 : Layout = Layout(columns=[1, 1, 1, 1])
+        layout3 : Layout = Layout(columns=[1, 1, 1])
         self.add_layout(layout3)
-        self._add_button = layout3.add_widget(Button("Add", on_click=self._add_to_bucket_list), 1)
+        self._add_button = layout3.add_widget(Button("Add", on_click=self._add_to_bucket_list), 0)
         self._add_button.disabled = True
-        layout3.add_widget(Button("Redo", on_click=self._redo_search), 2)
+        layout3.add_widget(Button("Redo", on_click=self._redo_search), 1)
+        layout3.add_widget(Button("Cancel", on_click=self._close), 2)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
 
     def _add_to_bucket_list(self):
         """Add the found album to the bucketlist."""
-        if self._result != None:
+        if self._result != None and not self._new_entry_already_exists(self._result):
             self._file_helper.add_new_entry_to_list(self._result)
             self._close()
     
+    def _new_entry_already_exists(self, new_entry : BucketAlbum):
+        for entry in self._file_helper.list:
+            if new_entry.release_id == entry.release_id:
+                return True
+        return False
+
     def _redo_search(self, message=""):
         """Reset the Widgets in the PopUp."""
         self._result = None
@@ -331,19 +337,30 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         # No user query
         if self._text.value == "":
             self._redo_search(message="Must enter a search term")
+            return
+        
         # User query given
+        self._result = discogs_helper.search_one(user_query=self._text.value)
+        # No result found
+        if self._result == None:
+            self._redo_search(message="No result found")
+            return
+        
+        # Result found
+        # Result already in list
+        if self._new_entry_already_exists(self._result):
+            self._add_button.disabled = True
+            self._result_label.text = "{} by {} - Album is already in list".format(self._result.title, self._result.artists)
+            # Switch focus back to Text element
+            self.switch_focus(layout=self._layouts[0], column=0, widget=0)
+        # Result is new
         else:
-            self._result = discogs_helper.search_one(user_query=self._text.value)
-            # No result found
-            if self._result == None:
-                self._redo_search(message="No result found")
-            # Result found
-            else:
-                self._result_label.text = "{} - {} ({}) [{}]".format(
-                    self._result.artists, self._result.title, self._result.year ,self._result.genres
-                )
-                self._add_button.disabled = False
-                self.switch_focus(layout=self._layouts[2], column=1, widget=0)
+            self._result_label.text = "{} - {} ({}) [{}]".format(
+                self._result.artists, self._result.title, self._result.year ,self._result.genres
+            )
+            self._add_button.disabled = False
+            # Focus to "Add" button
+            self.switch_focus(layout=self._layouts[2], column=1, widget=0)
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
@@ -375,7 +392,6 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
 
         layout2 : Layout = Layout(columns=[1])
         self.add_layout(layout2)
-        # layout2.add_widget(Divider(draw_line=False, height=1))
         self._error_label = layout2.add_widget(Label("", height=1))
         layout2.add_widget(Divider(draw_line=False, height=1))
         self._errors = []
@@ -459,7 +475,6 @@ class AddToListenedListPopUp(CustomPopUpBase):
     A "Add to listened albums" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    # TODO: Implement a check that makes sure albums aren't being added twice
     def __init__(self, screen : Screen, album : BucketAlbum, b_filehelper : FileHelper, l_filehelper : FileHelper):
         self._b_filehelper = b_filehelper
         self._l_filehelper = l_filehelper
