@@ -106,19 +106,6 @@ class CustomTabBase(Frame):
     def reload_list(self):
         """The updated list is loaded into this Tab's list again."""
         self._list.options = self._file_helper.return_list_as_tuples()
-
-    def generate_random_release_id(self):
-        """Utility method for generating a random release_id for a manually added album."""
-        # Generate a 5-char long string consisting of uppercase and lowercase letters and digits
-        random_id : str = "".join(random.choices((string.ascii_lowercase + string.ascii_uppercase + string.digits), k=5))
-        existing_ids : list[str] = []
-        for index, entry in enumerate(self._list.options):
-            existing_ids.append(entry[1])
-        
-        while random_id in existing_ids:
-            random_id = "".join(random.choices((string.ascii_lowercase + string.ascii_uppercase + string.digits), k=5))
-        
-        return random_id  
     
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
@@ -150,7 +137,7 @@ class BucketListFrame(CustomTabBase):
         """Initialize this BucketListFrame."""
         mclistbox = MultiColumnListBox(
             height=Widget.FILL_FRAME,
-            columns=["<7", "<30%", "<40%", "<15%"],
+            columns=["<6", "<30%", "0", "<25%"],
             options=file_helper.return_list_as_tuples(),
             titles=["Year", "Artists", "Title", "Genres"],
             name="BucketList",
@@ -213,7 +200,7 @@ class ListenedListFrame(CustomTabBase):
         """Initialize this ListenedListFrame."""
         mclistbox = MultiColumnListBox(
             height=Widget.FILL_FRAME,
-            columns=["<7", "<30%", "<37%", "<13%", "^12", "^8"],
+            columns=["<6", "<30%", "0", "<20%", "^12", "^8"],
             options=file_helper.return_list_as_tuples(),
             titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
             name="ListenedList",
@@ -226,7 +213,7 @@ class ListenedListFrame(CustomTabBase):
         )
 
         layout1 : Layout = Layout(columns=[1], fill_frame=False)
-        self.add_layout(layout=layout1)
+        self.add_layout(layout1)
         layout1.add_widget(self._list)
         # TODO: Add text here that shows the keys needed to use the program, perhaps even using colors
         layout1.add_widget(
@@ -370,38 +357,95 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
     A "Add" and "Cancel" button are the two options for leaving this PopUp.
     """
 
-    # TODO: Implement a check that makes sure albums aren't being added twice
-    # TODO: Implement a mechanism that creates and checks unique release IDs
     def __init__(self, screen : Screen, file_helper : FileHelper):
         # Initialize CustomPopUpBase
         super().__init__(
-            screen, title="Add an album to the bucketlist manually", width=screen.width * 4 // 5, height=13
+            screen, title="Add an album to the bucketlist manually", width=screen.width * 4 // 5, height=11
         )
         self._file_helper = file_helper
 
-        layout1 : Layout = Layout(columns=[1])
+        layout1 : Layout = Layout(columns=[1], fill_frame=True)
         self.add_layout(layout1)
         layout1.add_widget(Divider(draw_line=False, height=1))
-        layout1.add_widget(TextBox(label="Artist(s):", height=3, as_string=True, line_wrap=True))
-        layout1.add_widget(TextBox(label="Release Title:", height=3, as_string=True, line_wrap=True))
-        layout1.add_widget(Text(label="Year:", validator=check_if_valid_year))
-        layout1.add_widget(Text(label="Genre(s):"))
+        self._input_artists = layout1.add_widget(Text(label="Artist(s):", validator=self._check_if_string_not_none))
+        self._input_title = layout1.add_widget(Text(label="Release Title:", validator=self._check_if_string_not_none))
+        self._input_year = layout1.add_widget(Text(label="Year:", validator=self._check_if_valid_year))
+        self._input_genres = layout1.add_widget(Text(label="Genre(s):", validator=self._check_if_string_not_none))
         layout1.add_widget(Divider(draw_line=False))
 
-        layout2 : Layout = Layout(columns=[1, 1, 1, 1])
+        layout2 : Layout = Layout(columns=[1])
         self.add_layout(layout2)
-        layout2.add_widget(Button(text="Add", on_click=self.add_to_bucket_list), 1)
-        layout2.add_widget(Button(text="Cancel", on_click=self._close), 2)
+        # layout2.add_widget(Divider(draw_line=False, height=1))
+        self._error_label = layout2.add_widget(Label("", height=1))
+        layout2.add_widget(Divider(draw_line=False, height=1))
+        self._errors = []
+
+        layout3 : Layout = Layout(columns=[1, 1, 1, 1])
+        self.add_layout(layout3)
+        layout3.add_widget(Button(text="Add", on_click=self._add_to_bucket_list), 1)
+        layout3.add_widget(Button(text="Cancel", on_click=self._close), 2)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
 
-    # TODO: Remove this, perhaps replace with a "global" function somewhere down below
-    def add_to_bucket_list(self):
+    def _add_to_bucket_list(self):
         """Uses the data entered by the user to add a new entry to the bucketlist."""
-        # TODO: Code to add the entry to the bucketlist
-        self._close()
+        # Reset errors list
+        self._errors = []
+        
+        if self._all_inputs_valid():
+            new_bucket = BucketAlbum(
+                release_id=self._generate_random_release_id(),
+                artists=self._input_artists.value,
+                title=self._input_title.value,
+                year=self._input_year.value,
+                genres=self._input_genres.value
+            )
+            self._file_helper.add_new_entry_to_list(new_bucket)
+            self._close()
+        else:
+            self._error_label.text = ", ".join(self._errors).capitalize() + "."
     
+    def _generate_random_release_id(self):
+        """Utility method for generating a random release_id for a manually added album."""
+        # Generate a random long integer
+        random_id : int = int("".join(random.choices((string.digits), k=12)))
+        existing_ids : list[int] = []
+        for index, entry in enumerate(self._file_helper.list):
+            existing_ids.append(entry.release_id)
+        
+        while random_id in existing_ids:
+            random_id = int("".join(random.choices((string.digits), k=12)))
+        
+        return random_id
+
+    def _all_inputs_valid(self):
+        """
+        Checks if all the user inputs are valid.
+        Adds errors for UI output.
+        """
+        if not self._input_artists.is_valid:
+            self._errors.append("No artist(s) given")
+        if not self._input_title.is_valid:
+            self._errors.append("no title given")
+        if not self._input_year.is_valid:
+            self._errors.append("year must be a number")
+        if not self._input_genres.is_valid:
+            self._errors.append("no genre(s) given")
+        
+        return self._input_artists.is_valid and self._input_title.is_valid and self._input_year.is_valid and self._input_genres.is_valid
+
+    def _check_if_valid_year(self, value : str):
+        """Ensures that a year entered by the user is 4 digits or less and consists only of digits."""
+        if len(value) <= 4 and value.isnumeric():
+            return True
+        else:
+            return False
+    
+    def _check_if_string_not_none(self, value : str):
+        """Ensures that a given string is not None or empty."""
+        return value != None and value != ""
+
     def process_event(self, event):
         """Do the key handling for this Frame."""
         return super().process_event(event)
@@ -478,13 +522,6 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
         """Do the key handling for this Frame."""
         return super().process_event(event)
 
-def check_if_valid_year(value : str):
-    """Ensures that a year entered by the user is 4 digits or less and consists only of digits."""
-    if len(value) <= 4 and value.isnumeric():
-        return True
-    else:
-        return False
-
 def exit_application(text : str):
     """Exit the program with the given text message."""
     raise StopApplication(message=text)
@@ -504,3 +541,7 @@ def enter(screen : Screen, scene : Scene):
         )
     ]
     screen.play(scenes=scenes, stop_on_resize=True, start_scene=scene)
+
+    # Save any list changes to disk
+    b_filehelper.write_to_disk()
+    l_filehelper.write_to_disk()
