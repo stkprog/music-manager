@@ -306,11 +306,7 @@ class CustomPopUpBase(Frame):
 
     def process_event(self, event):
         """Do the key handling for this Frame."""
-        if isinstance(event, KeyboardEvent):
-            if event.key_code in [ord("q"), ord("Q")]:
-                self._close()
-                return  # Both PopUp and the program itself are closed if super().process_event is executed
-
+        # Other processing is handled in parent class
         return super().process_event(event)
 
     def _close(self) -> None:
