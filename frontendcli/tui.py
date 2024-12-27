@@ -1,5 +1,6 @@
 from backend.discogs import DiscogsHelper
 from backend.filehelper import FileHelper
+from backend.filehelper import MUSICMANAGER_PATH
 from backend.models import Album, BucketAlbum, ListenedAlbum
 
 # import sys
@@ -16,7 +17,7 @@ from asciimatics.exceptions import NextScene, StopApplication
 # Initialize helper objects to be used in this script
 b_filehelper = FileHelper(list_path="bucketlist.json")
 l_filehelper = FileHelper(list_path="listenedlist.json")
-discogs_helper = DiscogsHelper(open("token.txt", "r").read())
+discogs_helper = DiscogsHelper(open(MUSICMANAGER_PATH +  "token.txt", "r").read())
 
 THEMES["music-manager"] = {
     #                   FOREGROUND                          ATTRIBUTE           BACKGROUND
@@ -321,7 +322,8 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         self.add_layout(layout3)
         self._add_button = layout3.add_widget(Button("Add", on_click=self._add_to_bucket_list), 0)
         self._add_button.disabled = True
-        layout3.add_widget(Button("Redo", on_click=self._redo_search), 1)
+        self._redo_button = layout3.add_widget(Button("Redo", on_click=self._redo_search), 1)
+        self._redo_button.disabled = True
         layout3.add_widget(Button("Cancel", on_click=self._close), 2)
 
         # "Initialize" layouts and locations of widgets
@@ -345,32 +347,39 @@ class AddToBucketListDiscogsPopUp(CustomPopUpBase):
         """Reset the Widgets in the PopUp."""
         self._result = None
         self._text.value = ""
+        self._result_label.text = ""
         self._add_button.disabled = True
-        self._result_label.text = message
+        self._redo_button.disabled = True
         # Switch focus back to Text element
         self.switch_focus(layout=self._layouts[0], column=0, widget=1)
 
     def _search(self) -> None:
         """Search for an album on Discogs using the user's entered query and present the results."""
+        self._redo_button.disabled = False
+        
         # No user query
         if self._text.value == "":
-            self._redo_search(message="Must enter a search term")
+            # Switch focus to "Redo" button
+            self.switch_focus(layout=self._layouts[2], column=1, widget=0)
+            self._result_label.text = "Must enter a search term"
             return
         
         # User query given
         self._result = discogs_helper.search_one(user_query=self._text.value)
         # No result found
         if self._result == None:
-            self._redo_search(message="No result found")
+            self._result_label.text = "Album not found"
+            # Switch focus to "Redo" button
+            self.switch_focus(layout=self._layouts[2], column=1, widget=0)
             return
         
         # Result found
         # Result already in list
         if self._new_entry_already_exists(self._result):
             self._add_button.disabled = True
-            self._result_label.text = "{} by {} - Album is already in list".format(self._result.title, self._result.artists)
-            # Switch focus back to Text element
-            self.switch_focus(layout=self._layouts[0], column=0, widget=0)
+            self._result_label.text = "{} - Album is already in list".format(self._result.title)
+            # Switch focus to "Redo" button
+            self.switch_focus(layout=self._layouts[2], column=1, widget=0)
         # Result is new
         else:
             self._result_label.text = "{} - {} ({}) [{}]".format(

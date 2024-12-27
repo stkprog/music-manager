@@ -222,6 +222,31 @@ layout2.add_widget(
 ## discogs API
 * some artists share the same names, so they are made identifiable by adding the number at the end e.g. (2)
 * to remove this using string cutting: ``artist_name[:-4]``
+* archived code:
+```
+def search_multiple(self, user_query : str) -> list[BucketAlbum]:
+    """Search for the main release of albums using the text provided by the user."""
+    results : MixedPaginatedList = self.d.search(user_query, type="master").page(1)[0:10]
+    artists : str = ""
+    processed_results : list[BucketAlbum] = []
+
+    # Searching for "master releases" instead of "releases"
+    # and then the main release. multiple releases of the same album
+    # e.g. in different formats (LP, CD, ...) don't need to be shown to the user.
+    for r in results:                       # r = Master
+        main_r : Release = r.main_release   # main_r = Release
+        artists = []
+        for a in main_r.artists:
+            artists.append(self.process_artist(a.name))
+        artists = self.array_to_comma_separated_string(artists)
+        genres = self.array_to_comma_separated_string(main_r.genres)
+        year : int | str = self.process_year(r, main_r)
+
+        processed_results.append(BucketAlbum(
+            main_r.id, artists, main_r.title, genres, year
+        ))
+    return processed_results
+```
 
 ## things to note / useful links
 * initializing locales so characters of all languages(?) work: [here](https://stackoverflow.com/questions/42510606/python-curses-textpad-textbox-keyboard-input-not-working-with-german-umlauts)
