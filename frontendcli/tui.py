@@ -25,10 +25,10 @@ THEMES["music-manager"] = {
     "shadow": (Screen.COLOUR_BLACK,                     None,               Screen.COLOUR_BLACK),
     "disabled": (Screen.COLOUR_BLACK,                   Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "invalid": (Screen.COLOUR_YELLOW,                   Screen.A_BOLD,      Screen.COLOUR_RED),
-    "label": (Screen.COLOUR_CYAN,                       Screen.A_BOLD,      Screen.COLOUR_BLACK),
+    "label": (Screen.COLOUR_BLACK,                      Screen.A_BOLD,      Screen.COLOUR_CYAN),
     "borders": (Screen.COLOUR_WHITE,                    Screen.A_BOLD,      Screen.COLOUR_BLACK),
     "scroll": (Screen.COLOUR_WHITE,                     Screen.A_NORMAL,    Screen.COLOUR_BLACK),
-    "title": (Screen.COLOUR_CYAN,                       Screen.A_BOLD,      Screen.COLOUR_BLACK),
+    "title": (Screen.COLOUR_BLACK,                      Screen.A_BOLD,      Screen.COLOUR_CYAN),
     "edit_text": (Screen.COLOUR_BLACK,                  Screen.A_BOLD,      Screen.COLOUR_WHITE),
     "focus_edit_text": (Screen.COLOUR_BLACK,            Screen.A_NORMAL,    Screen.COLOUR_WHITE),
     "readonly": (Screen.COLOUR_BLUE,                    Screen.A_BOLD,      Screen.COLOUR_BLACK),
@@ -94,6 +94,7 @@ class CustomTabBase(Frame):
         self._file_helper = file_helper
         self._list = mclistbox
         self.set_theme("music-manager")
+        self._sort_reverse = False
 
     def find_index_of_entry(self, release_id : int) -> int:
         """Takes a release_id and searches for the corresponding album in this Tab's list."""
@@ -104,6 +105,10 @@ class CustomTabBase(Frame):
     def _find_current_entry(self) -> Album:
         """Returns the current entry selected in the MultiColumnListBox."""
         return self._file_helper.list[self.find_index_of_entry(self._list.value)]
+
+    def _reverse_sorting_order(self) -> None:
+        """Reverses the boolean handling the sorting order."""
+        self._sort_reverse = not self._sort_reverse
 
     def _delete_release_from_list(self, release_id : int) -> None:
         """Deletes an album from the specified list."""
@@ -125,6 +130,26 @@ class CustomTabBase(Frame):
                     has_shadow=True,
                     buttons=["Close"],
                 ))
+            # Sort by Year
+            elif event.key_code == Screen.KEY_F2:
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.year, reverse=self._sort_reverse)
+                self._reverse_sorting_order()
+                self._reload_list()
+            # Sort by Artist(s)
+            elif event.key_code == Screen.KEY_F3:
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.artists, reverse=self._sort_reverse)
+                self._reverse_sorting_order()
+                self._reload_list()
+            # Sort by Title
+            elif event.key_code == Screen.KEY_F4:
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.title, reverse=self._sort_reverse)
+                self._reverse_sorting_order()
+                self._reload_list()
+            # Sort by Genres
+            elif event.key_code == Screen.KEY_F5:
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.genres)
+                self._reverse_sorting_order()
+                self._reload_list()
             # Delete selected entry from list
             elif event.key_code in [ord("x"), ord("X")] and len(self._list.options) > 0:
                 self._delete_release_from_list(self._list.value)
@@ -160,9 +185,12 @@ class BucketListFrame(CustomTabBase):
         self.add_layout(layout=layout1)
         layout1.add_widget(self._list)
         layout1.add_widget(Label(
-            label="Q=exit   1=switch to listened list   L=add to listened list   D=add using discogs   M=add manually   X=remove selected   C=credits",
+            label="Q=exit   1=listened list   L=add to listened list   D=add using discogs   M=add manually   X=remove   C=credits",
             align="<",
             height=1
+        ))
+        layout1.add_widget(Label(
+            label="Sorting:   F2=year   F3=artist(s)   F4=title   F5=genre(s)", align="<", height=1
         ))
 
         # "Initialize" layouts and locations of widgets
@@ -223,8 +251,11 @@ class ListenedListFrame(CustomTabBase):
         self.add_layout(layout1)
         layout1.add_widget(self._list)
         layout1.add_widget(Label(
-            label="Q=exit   2=switch to bucketlist   E=edit rating & thoughts   T=view thoughts   X=remove selected   C=credits",
+            label="Q=exit   2=bucketlist   E=edit rating & thoughts   T=view thoughts   X=remove   C=credits",
             align="<",height=1
+        ))
+        layout1.add_widget(Label(
+            label="Sorting:   F2=year   F3=artist(s)   F4=title   F5=genre(s)   F6=rating", align="<", height=1
         ))
 
         # "Initialize" layouts and locations of widgets
@@ -238,6 +269,11 @@ class ListenedListFrame(CustomTabBase):
             # Switch to BucketListTab
             if event.key_code == ord("2"):
                 switch_to_tab("BucketListTab")
+            # Sort by Rating
+            elif event.key_code == Screen.KEY_F6:
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.rating, reverse=self._sort_reverse)
+                self._reverse_sorting_order()
+                self._reload_list()
             # EditListenedRatingAndThoughtsPopUp
             elif event.key_code in [ord("e"), ord("E")] and amount_of_albums > 0:
                 self._scene.add_effect(EditListenedRatingAndThoughtsPopUp(
