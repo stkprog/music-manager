@@ -243,11 +243,11 @@ class ListenedListFrame(CustomTabBase):
                     self._screen, album=self._find_current_entry(), file_helper=l_filehelper, parent_frame=self
                 ))
             elif event.key_code in [ord("t"), ord("E")] and amount_of_albums > 0:
-                self._scene.add_effect(PopUpDialog(
-                    self._screen,
-                    buttons=["Close"],
-                    has_shadow=True,
-                    text="Thoughts on '" + self._find_current_entry().title + "'\n\n" + self._find_current_entry().thoughts,
+                self._scene.add_effect(ViewThoughtsPopUp(
+                    self._screen, 
+                    album_title=self._find_current_entry().title, 
+                    album_thoughts=self._find_current_entry().thoughts, 
+                    parent_frame=self
                 ))
 
         # Other processing is handled in parent class
@@ -264,8 +264,6 @@ class CustomPopUpBase(Frame):
         super().__init__(
             screen, height, width, has_shadow=True, is_modal=False, has_border=True, title=title, can_scroll=False
         )
-        # TODO: Currently theme is passable as an argument
-        # Perhaps define a separate theme for PopUps
         self._parent_frame = parent_frame
         self.set_theme("default")
 
@@ -550,7 +548,7 @@ class AddToListenedListPopUp(CustomPopUpBase):
             label="Rating",
             fit=True
         ))
-        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5,))
+        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5))
 
         layout2 = Layout(columns=[1, 1])
         self.add_layout(layout2)
@@ -606,7 +604,7 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
         self._listened_album : ListenedAlbum = album
         text = "Edit rating and thoughts for '" + self._listened_album.title + "'"
         # Shorten incase of long album title
-        popup_width = screen.width * 4 // 5 - 4 # 2 to account for single quotes
+        popup_width = screen.width * 4 // 5 - 4 # minus 4 to account for quotes
         if len(text) > (popup_width):
             text = text[:popup_width - 4] + "...'"
     
@@ -641,7 +639,7 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
             fit=True
         ))
         self._album_rating.value = int(self._listened_album.rating)
-        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5,))
+        self._album_thoughts = layout1.add_widget(TextBox(label="Thoughts:", as_string=True, height=5))
         self._album_thoughts.value = self._listened_album.thoughts
 
         layout2 = Layout(columns=[1, 1])
@@ -653,6 +651,7 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
         self.fix()
 
     def _change_rating_and_thoughts(self) -> None:
+        """Replace the old listened album with the new one, which has the updated rating and thoughts."""
         listened_album = ListenedAlbum(
             self._listened_album.release_id,
             self._listened_album.artists,
@@ -669,6 +668,37 @@ class EditListenedRatingAndThoughtsPopUp(CustomPopUpBase):
     def process_event(self, event):
         """Do the key handling for this Frame."""
         return super().process_event(event)
+
+class ViewThoughtsPopUp(CustomPopUpBase):
+    """A simple PopUp for viewing the user's thoughts about the currently selected listened album."""
+    def __init__(self, screen : Screen, album_title : str, album_thoughts : str, parent_frame : ListenedListFrame):
+        text = "Thoughts on '" + album_title + "'"
+        # Shorten incase of long album title
+        popup_width = screen.width * 3 // 4 - 4     # minus 4 to account for quotes
+        if len(text) > (popup_width):
+            text = text[:popup_width - 4] + "...'"
+
+        super().__init__(
+            screen, title=text, width=popup_width, height=screen.height * 3 // 4, parent_frame=parent_frame
+        )
+
+        divider = Divider(draw_line=False, height=1)
+
+        layout1 = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout1)
+        layout1.add_widget(divider)
+        popup_height = screen.height * 3 // 4 - 2   # minus 2 to account for borders
+        textbox_height = popup_height - 3           # minus 3 to account for dividers and closing button 
+        self._album_thoughts = layout1.add_widget(TextBox(as_string=True, height=textbox_height, line_wrap=True, readonly=True))
+        self._album_thoughts.value = album_thoughts
+        layout1.add_widget(divider)
+        
+        layout2 = Layout(columns=[1])
+        self.add_layout(layout2)
+        layout2.add_widget(Button("Close", on_click=self._close))
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
 
 def exit_application(text : str) -> None:
     """Exit the program with the given text message."""
