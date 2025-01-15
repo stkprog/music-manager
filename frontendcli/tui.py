@@ -3,7 +3,6 @@ from backend.filehelper import FileHelper
 from backend.filehelper import MUSICMANAGER_PATH
 from backend.models import Album, BucketAlbum, ListenedAlbum
 
-# import sys
 import string
 import random
 
@@ -43,6 +42,7 @@ THEMES["music-manager"] = {
     "selected_field": (Screen.COLOUR_WHITE,             Screen.A_NORMAL,    Screen.COLOUR_BLUE),
     "focus_field": (Screen.COLOUR_WHITE,                Screen.A_NORMAL,    Screen.COLOUR_BLACK),
     "selected_focus_field": (Screen.COLOUR_WHITE,       Screen.A_BOLD,      Screen.COLOUR_BLUE),
+    "selected_sort_label": (Screen.COLOUR_CYAN,        Screen.A_BOLD,      Screen.COLOUR_BLACK),
 }
 THEMES["default"]["label"] = (Screen.COLOUR_CYAN, Screen.A_BOLD, Screen.COLOUR_BLUE)
 
@@ -96,6 +96,11 @@ class CustomTabBase(Frame):
         self.set_theme("music-manager")
         self._sort_reverse = False
 
+        self._sort_by_year_label = Label(label="F2=year", align="^", height=1)
+        self._sort_by_artists_label = Label(label="F3=artist(s)", align="^", height=1)
+        self._sort_by_title_label = Label(label="F4=title", align="^", height=1)
+        self._sort_by_genres_label = Label(label="F5=genre(s)", align="^", height=1)
+
     def find_index_of_entry(self, release_id : int) -> int:
         """Takes a release_id and searches for the corresponding album in this Tab's list."""
         for index, entry in enumerate(self._list.options):
@@ -117,7 +122,21 @@ class CustomTabBase(Frame):
     def _reload_list(self) -> None:
         """The updated list is loaded into this Tab's list again."""
         self._list.options = self._file_helper.return_list_as_tuples()
-    
+
+    def _reset_sort_labels(self):
+        """
+        Reset all the labels used for showing the current sort mode.
+        This includes setting their text back to normal and the color palette to the normal "label" one.
+        """
+        self._sort_by_year_label.text = "F2=year"
+        self._sort_by_year_label.custom_colour = None
+        self._sort_by_artists_label.text = "F3=artist(s)"
+        self._sort_by_artists_label.custom_colour = None
+        self._sort_by_title_label.text = "F4=title"
+        self._sort_by_title_label.custom_colour = None
+        self._sort_by_genres_label.text = "F5=genre(s)"
+        self._sort_by_genres_label.custom_colour = None
+
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
         if isinstance(event, KeyboardEvent):
@@ -133,21 +152,33 @@ class CustomTabBase(Frame):
             # Sort by Year
             elif event.key_code == Screen.KEY_F2:
                 self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.year, reverse=self._sort_reverse)
+                self._reset_sort_labels()
+                self._sort_by_year_label.custom_colour = "selected_sort_label"
+                self._sort_by_year_label.text += " ▼" if self._sort_reverse else " ▲"
                 self._reverse_sorting_order()
                 self._reload_list()
             # Sort by Artist(s)
             elif event.key_code == Screen.KEY_F3:
                 self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.artists, reverse=self._sort_reverse)
+                self._reset_sort_labels()
+                self._sort_by_artists_label.custom_colour = "selected_sort_label"
+                self._sort_by_artists_label.text += " ▼" if self._sort_reverse else " ▲"
                 self._reverse_sorting_order()
                 self._reload_list()
             # Sort by Title
             elif event.key_code == Screen.KEY_F4:
                 self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.title, reverse=self._sort_reverse)
+                self._reset_sort_labels()
+                self._sort_by_title_label.custom_colour = "selected_sort_label"
+                self._sort_by_title_label.text += " ▼" if self._sort_reverse else " ▲"
                 self._reverse_sorting_order()
                 self._reload_list()
             # Sort by Genres
             elif event.key_code == Screen.KEY_F5:
-                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.genres)
+                self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.genres, reverse=self._sort_reverse)
+                self._reset_sort_labels()
+                self._sort_by_genres_label.custom_colour = "selected_sort_label"
+                self._sort_by_genres_label.text += " ▼" if self._sort_reverse else " ▲"
                 self._reverse_sorting_order()
                 self._reload_list()
             # Delete selected entry from list
@@ -189,9 +220,14 @@ class BucketListFrame(CustomTabBase):
             align="<",
             height=1
         ))
-        layout1.add_widget(Label(
-            label="Sorting:   F2=year   F3=artist(s)   F4=title   F5=genre(s)", align="<", height=1
-        ))
+
+        layout2 : Layout = Layout(columns=[1, 1, 1, 1, 1], fill_frame=False, gutter=0)
+        self.add_layout(layout2)
+        layout2.add_widget(Label(label="Sorting:", align="<", height=1), 0)
+        layout2.add_widget(self._sort_by_year_label, 1)
+        layout2.add_widget(self._sort_by_artists_label, 2)
+        layout2.add_widget(self._sort_by_title_label, 3)
+        layout2.add_widget(self._sort_by_genres_label, 4)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
@@ -247,19 +283,34 @@ class ListenedListFrame(CustomTabBase):
             file_helper=file_helper
         )
 
-        layout1 : Layout = Layout(columns=[1], fill_frame=False)
+        layout1 : Layout = Layout(columns=[1], fill_frame=True)
         self.add_layout(layout1)
         layout1.add_widget(self._list)
         layout1.add_widget(Label(
-            label="Q=exit   2=bucketlist   E=edit rating & thoughts   T=view thoughts   X=remove   C=credits",
-            align="<",height=1
+            label="Q=exit   2=bucketlist   E=edit rating & thoughts   T=view thoughts   X=remove   C=credits", align="<", height=1
         ))
-        layout1.add_widget(Label(
-            label="Sorting:   F2=year   F3=artist(s)   F4=title   F5=genre(s)   F6=rating", align="<", height=1
-        ))
+
+        layout2 : Layout = Layout(columns=[1, 1, 1, 1, 1, 1], fill_frame=False, gutter=0)
+        self.add_layout(layout2)
+        layout2.add_widget(Label(label="Sorting:", align="<", height=1), 0)
+        self._sort_by_rating_label = Label(label="F6=rating", align="^", height=1)
+        layout2.add_widget(self._sort_by_year_label, 1)
+        layout2.add_widget(self._sort_by_artists_label, 2)
+        layout2.add_widget(self._sort_by_title_label, 3)
+        layout2.add_widget(self._sort_by_genres_label, 4)
+        layout2.add_widget(self._sort_by_rating_label, 5)
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+    def _reset_sort_labels(self):
+        """
+        Reset all the labels used for showing the current sort mode.
+        This includes setting their text back to normal and the color palette to the normal "label" one.
+        """
+        super()._reset_sort_labels()
+        self._sort_by_rating_label.text = "F6=rating"
+        self._sort_by_rating_label.custom_colour = None
 
     def process_event(self, event : Event):
         """Do the key handling for this Frame."""
@@ -272,6 +323,9 @@ class ListenedListFrame(CustomTabBase):
             # Sort by Rating
             elif event.key_code == Screen.KEY_F6:
                 self._file_helper.list = sorted(self._file_helper.list, key=lambda album:album.rating, reverse=self._sort_reverse)
+                self._reset_sort_labels()
+                self._sort_by_rating_label.custom_colour = "selected_sort_label"
+                self._sort_by_rating_label.text += " ▼" if self._sort_reverse else " ▲"
                 self._reverse_sorting_order()
                 self._reload_list()
             # EditListenedRatingAndThoughtsPopUp
@@ -491,13 +545,13 @@ class AddToBucketListManuallyPopUp(CustomPopUpBase):
     def _generate_random_release_id(self) -> int:
         """Utility method for generating a random release_id for a manually added album."""
         # Generate a random long integer
-        random_id : int = int("".join(random.choices((string.digits), k=12)))
+        random_id : int = int("".join(random.choices((string.digits), k=14)))
         existing_ids : list[int] = []
         for index, entry in enumerate(self._file_helper.list):
             existing_ids.append(entry.release_id)
         
         while random_id in existing_ids:
-            random_id = int("".join(random.choices((string.digits), k=12)))
+            random_id = int("".join(random.choices((string.digits), k=14)))
         
         return random_id
 
