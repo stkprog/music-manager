@@ -1,5 +1,6 @@
 from frontendcli.tui import enter
 
+import os
 import sys
 import click
 
@@ -16,7 +17,7 @@ def start() -> None:
             Screen.wrapper(
                 func=enter, catch_interrupt=False, arguments=[last_scene]
             )
-            sys.exit(0)
+            sys.exit(os.EX_OK)
         # Handle the Screen being resized
         except ResizeScreenError as error:
             last_scene = error.scene

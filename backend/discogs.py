@@ -1,6 +1,11 @@
+from backend.models import BucketAlbum
+from backend.filehelper import MUSICMANAGER_PATH
+
 from discogs_client import Client
 from discogs_client.models import Release, MixedPaginatedList, Master
-from backend.models import BucketAlbum
+
+import sys
+import os
 import re
 
 class DiscogsHelper:
@@ -62,3 +67,16 @@ class DiscogsHelper:
         elif len(array) == 1:
             comma_separated = array[0]
         return comma_separated
+    
+    @staticmethod
+    def read_personal_access_token() -> str | None:
+        token_path : str = MUSICMANAGER_PATH + "token.txt"
+        try:
+            token : str = open(token_path, "r").read()
+            return token
+        except:
+            print("No Discogs personal access token found.")
+            print("Tokens can be created at https://www.discogs.com/settings/developers.\n")
+            print("Create the file 'token.txt' in $YOUR_HOME_FOLDER/.music-manager")
+            print("and paste your token into it.")
+            sys.exit(os.EX_NOINPUT)

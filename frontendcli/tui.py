@@ -16,7 +16,7 @@ from asciimatics.exceptions import NextScene, StopApplication
 # Initialize helper objects to be used in this script
 b_filehelper = FileHelper(list_path="bucketlist.json")
 l_filehelper = FileHelper(list_path="listenedlist.json")
-discogs_helper = DiscogsHelper(open(MUSICMANAGER_PATH +  "token.txt", "r").read())
+discogs_helper = DiscogsHelper(DiscogsHelper.read_personal_access_token())
 
 THEMES["music-manager"] = {
     #                   FOREGROUND                          ATTRIBUTE           BACKGROUND

@@ -1,6 +1,7 @@
+from backend.models import Album, ListenedAlbum
+
 import os
 import json
-from backend.models import Album, ListenedAlbum
 
 MUSICMANAGER_PATH : str = os.path.expanduser("~") + "/.music-manager/"
 
