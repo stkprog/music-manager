@@ -47,11 +47,11 @@ class DiscogsHelper:
         """
         In rare cases, year might be unknown for whatever reason,
         or differ between releases.
-        If it can't be found, add string "Unknown"
+        If it can't be found, add string "????"
         """
         year : str = ""
         if main_release.year == 0 and master.year == 0:
-            year = "Unknown"
+            year = "????"
         elif main_release.year > 0 or (main_release.year == 0 and master.year > 0):
             year = str(master.year)
         return year
