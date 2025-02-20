@@ -202,7 +202,7 @@ class BucketListFrame(CustomTabBase):
             height=Widget.FILL_FRAME,
             columns=["<6", "<30%", "0", "<25%"],
             options=file_helper.return_list_as_tuples(),
-            titles=["Year", "Artists", "Title", "Genres"],
+            titles=["Year", "Artist(s)", "Title", "Genre(s)"],
             name="BucketList",
             add_scroll_bar=True
         )
@@ -273,7 +273,7 @@ class ListenedListFrame(CustomTabBase):
             height=Widget.FILL_FRAME,
             columns=["<6", "<30%", "0", "<20%", "^12", "^8"],
             options=file_helper.return_list_as_tuples(),
-            titles=["Year", "Artists", "Title", "Genres", "Ratings", "Thoughts"],
+            titles=["Year", "Artist(s)", "Title", "Genre(s)", "Ratings", "Thoughts"],
             name="ListenedList",
             add_scroll_bar=True
         )
