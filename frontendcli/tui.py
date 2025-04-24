@@ -183,9 +183,15 @@ class CustomTabBase(Frame):
                 self._reload_list()
             # Delete selected entry from list
             elif event.key_code in [ord("x"), ord("X")] and len(self._list.options) > 0:
-                self._delete_release_from_list(self._list.value)
-                self._file_helper.write_to_disk()
-                self._reload_list()
+                # self._delete_release_from_list(self._list.value)
+                # self._file_helper.write_to_disk()
+                # self._reload_list()
+                self._scene.add_effect(ReallyDeleteFromListPopUp(
+                    screen=self.screen,
+                    album=self._find_current_entry(),
+                    file_helper=self._file_helper,
+                    parent_frame=self
+                ))
             # Exit the program
             elif event.key_code in [ord("q"), ord("Q"), Screen.ctrl("c")]:
                 exit_application("Music Manager stopped.")
@@ -243,18 +249,18 @@ class BucketListFrame(CustomTabBase):
             # AddToBucketListDiscogsPopUp
             elif event.key_code in [ord("d"), ord("D")]:
                 self._scene.add_effect(AddToBucketListDiscogsPopUp(
-                    self._screen, b_filehelper, parent_frame=self
+                    screen=self._screen, file_helper=b_filehelper, parent_frame=self
                 ))
             # AddToBucketListManuallyPopUp
             elif event.key_code in [ord("m"), ord("M")]:
                 self._scene.add_effect(AddToBucketListManuallyPopUp(
-                    self._screen, b_filehelper, self
+                    screen=self._screen, file_helper=b_filehelper, parent_frame=self
                 ))
             # AddToListenedListPopUp
             elif event.key_code in [ord("l"), ord("L")] and amount_of_albums > 0:
                 album = self._find_current_entry()
                 self._scene.add_effect(AddToListenedListPopUp(
-                    self._screen, album, b_filehelper, l_filehelper, self
+                    screen=self._screen, album=album, b_filehelper=b_filehelper, l_filehelper=l_filehelper, parent_frame=self
                 ))
 
         # Other processing is handled in parent class
@@ -794,6 +800,40 @@ class ViewThoughtsPopUp(CustomPopUpBase):
 
         # "Initialize" layouts and locations of widgets
         self.fix()
+
+class ReallyDeleteFromListPopUp(CustomPopUpBase):
+    """A PopUp asking the user for confirmation to delete the selected entry."""
+    def __init__(self, screen : Screen, album : ListenedAlbum, file_helper : FileHelper, parent_frame : ListenedListFrame):
+        super().__init__(
+            screen, title="Confirm Deletion", width=screen.width * 1 // 2, height=screen.height * 1 // 2, parent_frame=parent_frame
+        )
+
+        self._album : Album = album
+        self._file_helper : FileHelper = file_helper
+
+        layout1 = Layout(columns=[1], fill_frame=True)
+        self.add_layout(layout1)
+        layout1.add_widget(
+            Label(label="Really delete '" + self._album.title + "' from the list?", height=5)
+        )
+
+        layout2 = Layout(columns=[1, 1])
+        self.add_layout(layout2)
+        layout2.add_widget(Button("Delete", on_click=self._delete_album_from_list), 0)
+        layout2.add_widget(Button("Cancel", on_click=self._close), 1)
+
+        # "Initialize" layouts and locations of widgets
+        self.fix()
+
+    def _delete_album_from_list(self):
+        """If user confirmed deletion, remove the entry from the list and write to file."""
+        self._file_helper.remove_entry_from_list(release_id=self._album.release_id)
+        self._file_helper.write_to_disk()
+        self._close()
+    
+    def process_event(self, event):
+        """Do the key handling for this Frame."""
+        return super().process_event(event)
 
 def exit_application(text : str) -> None:
     """Exit the program with the given text message."""
